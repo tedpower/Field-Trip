@@ -1,0 +1,339 @@
+/* Base */
+
+body {
+	margin: 0;
+	padding: 0;
+	text-align: center;
+	font: 13px Helvetica, sans-serif;
+}
+
+a {
+	text-decoration: none;
+	color: #333333;
+	font-weight: bold;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Logged In Header */
+
+#header {
+	background: url(header_bg.png) repeat-x;
+	height: 53px;
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+}
+
+#headwrap {
+	width: 830px;
+	margin: 0 auto;
+}
+
+#logo {
+	padding: 14px 0 14px 5px;
+	float: left;
+}
+
+#you, #friends {
+	width: 76px;
+	display: block;
+	float: left;
+	margin: 0 12px;
+}
+
+#you a, #friends a {
+	line-height: 50px;
+}
+
+#you {
+	text-align: right;
+}
+
+#friends {
+	text-align: left;
+}
+
+#toggle {
+	width: 200px;
+	margin: 0 auto;
+	background: url(dot.png) no-repeat 50% 50%;
+}
+
+#menu, #logout {
+	float: right;
+	line-height: 50px;
+	margin-right: 5px;
+}
+
+/* Logged In Body */
+
+body.loggedin {
+	background: url(bg.png);
+	text-shadow: 0 1px 0 #ffffff;
+	min-width: 825px;
+}
+
+#photos {
+  padding: 50px 0 0 5px;
+  text-align: left;
+  width: 825px;
+  margin: 0 auto;
+}
+
+.photo:hover {
+    cursor: pointer;
+}
+
+.away {
+  margin: 0 15px 15px 0;
+  width: 215px;
+  height: 215px;
+  float: left;
+  -webkit-transition: all 300ms;
+  background-size: auto 215px;
+  background-repeat: no-repeat;
+  background-position: center center;
+}
+
+.portrait {
+  background-size: 215px auto !important;
+}
+
+.homePortrait {
+  background-size: 160px auto !important;
+}
+
+.home {
+  margin: 0 5px 5px 0;
+  width: 160px;
+  height: 160px;
+  float: left;
+  -webkit-transition: all 300ms;
+  background-size: auto 160px;
+  background-repeat: no-repeat;
+}
+
+.away a {
+  width: 215px;
+  height: 215px;
+  display: block;
+}
+
+.home a {
+    width: 160px;
+    height: 160px;
+    display: block;
+}
+
+.trip {
+  clear:both;
+  padding: 10px 0;
+}
+
+
+.date {
+    font-size: 12px;
+    color: #999;
+    font-weight: normal;
+    padding: 5px 0;
+}
+
+.loggedin h2 {
+    font-weight: bold;
+    font-size: 15px;
+    color: #333333;
+}
+
+#hide {
+    background-color: rgba(252, 252, 252, .9);
+    z-index: 1;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    -webkit-transition: all 200ms;
+}
+
+.invisible {
+    background-color: rgba(27,27,27,0) !important;
+    z-index: -1 !important;
+}
+
+.theaterMode {
+	overflow: hidden;
+}
+
+.hidden {
+    display:none;
+}
+
+.lightbox {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    z-index: 2;
+    text-align: center;
+	overflow-x: auto;
+	overflow-y: scroll;
+}
+
+.lightbox .zoomContent {
+    margin: 15px auto;
+	border: 15px solid white;
+	background-color: #fff;
+	-webkit-box-shadow: 0 0 1px rgba(0, 0, 0, .25), 0 1px 5px 3px rgba(0, 0, 0, .05), 0 5px 4px -3px rgba(0, 0, 0, .06);
+}
+
+.meta {
+    text-align: left;
+}
+
+.meta .shout {
+    font-size: 16px;
+    padding-top: 10px;
+}
+
+.firstname {
+    font-weight: bold;
+}
+.meta a.venue {
+    font-size: 12px;
+    display: block;
+    padding-top: 10px;
+    font-weight: bold;
+}
+
+.meta a.date {
+    font-size: 12px;
+    display: block;
+    color: #999999;
+}
+
+
+/* Logged Out Homepage */
+
+@-webkit-keyframes photo {
+  from { 
+  -webkit-transform:translate(10px, -4000px) scale(0.1) rotate(-160deg);
+  opacity:0.0; 
+}
+  to { 
+  -webkit-transform:translate(0, 0);
+  scale(1.0) rotate(0); 
+  opacity:1.0;
+  }
+}
+
+@-webkit-keyframes text {
+  from { 
+  opacity:0.0; 
+}
+  to { 
+  opacity:1.0;
+  }
+}
+
+#sellit {
+    margin-left: 294px;
+	width: 506px;
+	-webkit-animation: text 1s ease-out 0 1;
+}
+
+#dog {
+	float: left;
+	padding: 0 30px;
+    -webkit-animation: photo 1s ease-out 0 1;
+    -webkit-transform: translateY(0) scale(1.0) rotate(0);
+}
+
+#content {
+	margin: 140px auto 0 auto;
+	text-align: left;
+	width: 830px;
+	height: 340px;
+}
+
+#igconnect, #fsconnect {
+	height: 43px;
+	width: 290px;
+	display: block;
+	overflow: hidden;
+	background-position: 0 0;
+	margin: 0 10px 10px 0;
+	-webkit-border-radius: 6px;
+	-webkit-transition: background-color 0.3s;
+	text-indent: -9999em;
+}
+
+#igconnect {
+	background: #7A6B61 url(ig.png) no-repeat;
+}
+
+#fsconnect {
+	background: #0083DA url(4sq.png) no-repeat;
+}
+
+#igconnect:hover {
+	background-color: #6B5E55;
+}
+
+#fsconnect:hover {
+	background-color: #0073BF;
+}
+
+#fsconnect:active, #igconnect:active {
+	-webkit-box-shadow:inset 0 0 30px rgba(0,0,0,.6);
+}
+
+#footer {
+	text-transform: uppercase;
+	font-weight: bold;
+	font-size: 11px;
+	margin: 0;
+	padding: 20px 0 0 0;
+	color: #666;
+}
+
+a.inactive {
+	color: #999999;
+}
+
+.loggedOut h1 {
+	width: 506px;
+	float: left;
+	text-indent: -9999em;
+	height: 64px;
+	margin: 0 0 26px 0;
+	padding: 0;
+	background: url(fieldtrip.png) no-repeat;
+}
+
+.loggedOut h2 {
+	width: 485px;
+	text-indent: -9999em;
+	height: 48px;
+	float: left;
+	margin: 0 0 26px 0;
+	padding: 0;
+	background: url(description.png) no-repeat;
+}
+
+
+/* Hacks */
+
+.clearfix:after {
+	content: ".";
+	display: block;
+	clear: both;
+	visibility: hidden;
+	line-height: 0;
+	height: 0;
+}

@@ -1,0 +1,57 @@
+{% extends "_base.html" %}
+{% block bodycontent %}
+
+<script type="text/javascript">
+
+$(document).ready(function(){
+
+  var latlng = new google.maps.LatLng({{user.homeCityLat}}, {{user.homeCityLng}});
+  var myOptions = {
+    zoom: 8,
+    center: latlng,
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+  };
+  
+  var currentRadius = {{user.radius}} * 1609.344
+  
+  var map = new google.maps.Map(document.getElementById("map_canvas"),
+      myOptions);
+      // Construct the circle for each value in citymap. We scale population by 20.
+      var populationOptions = {
+        strokeColor: "#FF0000",
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        fillColor: "#FF0000",
+        fillOpacity: 0.35,
+        map: map,
+        center: new google.maps.LatLng({{user.homeCityLat}}, {{user.homeCityLng}}),
+        radius: currentRadius
+      };
+      cityCircle = new google.maps.Circle(populationOptions);
+});
+</script>
+
+  <form>
+    Home city: <input type="text" name="homeTow" value="{{user.fs_homeCity}}" />
+    Radius: 
+    <select>
+      <option>20 miles</option>
+      <option selected>30 miles</option>
+      <option>40 miles</option>
+      <option>50 miles</option>
+      <option>60 miles</option>
+      <option>70 miles</option>
+      <option>80 miles</option>
+    </select>
+    <div id="map_canvas" style="width: 500px; height: 300px"></div>
+    <input type="submit" value="Save" />
+
+  </form>
+
+<p><a href="/iauth">Instagram</a></p>
+
+<a href="#">Delete account</a>
+
+</body>
+</html>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "_base.html" %}
+{% block bodycontent %}
+
+{% if user.updated %}
+    <div id="photos" class="clearfix">
+        {% for trip in user.get_all_trips %}
+            <div class="trip">
+                {% if trip.home and trip.photos %}
+                    <h2>Home in {{user.fs_homeCity}}</h2>
+                    {% for photo in trip.get_all_photos %}
+                        <div id="{{photo.fs_id}}" class="photo home {% if photo.portrait %} homePortrait {% endif %}" style="background-image:url({{ photo.fs_300 }})"></div>
+                    {% endfor %}
+                {% else %}
+                    {% if not trip.home and trip.photos %}
+                        <h2>{{ trip.title }}
+                            
+                            <!-- <form>
+                            <input type="text" value="{{ trip.title }}" />
+                            </form> -->
+                            
+                        <div class="date">
+                            {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
+                                {{ trip.start_date|date:"M j, Y" }}
+                            {% else %}
+                                {{ trip.start_date|date:"M j, Y" }} - {{ trip.end_date|date:"M j, Y" }}
+                            {% endifequal %}
+                        </div>
+                        </h2>
+                        {% for photo in trip.get_all_photos %}
+                            <div id="{{photo.fs_id}}" class="photo home {% if photo.portrait %} homePortrait {% endif %}" style="background-image:url({{ photo.fs_300 }})"></div>
+                        {% endfor %}
+                    {% endif %}
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+    
+    <div id="hide" class="invisible"></div>
+
+    {% for trip in user.get_all_trips %}
+        {% for photo in trip.get_all_photos %}
+            <div id="l{{photo.fs_id}}"  class="lightbox hidden">
+                <div class="zoomContent" style="width:{{ photo.width }}px;">
+                    <img src="{{ photo.photo_url }}">
+                    <div class="meta" style="width:{{ photo.width }}px;">
+                        {% if photo.fs_shout %}
+                            <div class="shout"><span class="firstname">{{ user.fs_firstName }}:</span> "{{photo.fs_shout}}"</div>
+                        {% endif %}
+                        <a class="venue" href="https://foursquare.com/v/{{photo.fs_venue_id}}">{{photo.fs_venue_name}}</a>
+                        <a class="date" href="https://foursquare.com/{% if user.twitter %}{{ user.twitter }}{% else %}{{ user.fs_id }}{% endif %}/checkin/{{photo.fs_checkin_id}}">{{ photo.fs_createdAt|date:"M j, Y" }}</a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    <div id="end"></div>
+    
+{% else %}
+    <p>Updating!</p>
+{% endif %}
+
+<script>
+{% if user.updated %}
+    var test = true;
+{% else %}
+    var test = false;
+{% endif %}
+
+function updatePage() { 
+    location.reload(true);
+}
+if (test == false) {
+    setTimeout('updatePage()', 4000); 
+}
+</script>
+
+{% endblock %}
