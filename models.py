@@ -15,6 +15,7 @@ class FS_User(db.Model):
     homeCityLat = db.FloatProperty()
     homeCityLng = db.FloatProperty()
     radius = db.IntegerProperty(default=30)
+    fs_profilePic = db.StringProperty()
     fs_photos = db.StringListProperty()
     ig_photos = db.StringListProperty()
     photoCount = db.IntegerProperty()

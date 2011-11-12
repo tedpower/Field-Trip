@@ -4,20 +4,16 @@
 {% if user.updated %}
     <div id="photos" class="clearfix">
         {% for trip in user.get_all_trips %}
-            <div class="trip">
                 {% if trip.home and trip.photos %}
                     <h2>Home in {{user.fs_homeCity}}</h2>
+                    <div class="trip clearfix">
+                    
                     {% for photo in trip.get_all_photos %}
                         <div id="{{photo.fs_id}}" class="photo home {% if photo.portrait %} homePortrait {% endif %}" style="background-image:url({{ photo.fs_300 }})"></div>
                     {% endfor %}
                 {% else %}
                     {% if not trip.home and trip.photos %}
-                        <h2>{{ trip.title }}
-                            
-                            <!-- <form>
-                            <input type="text" value="{{ trip.title }}" />
-                            </form> -->
-                            
+                        <h2>{{ trip.title }}                            
                         <div class="date">
                             {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
                                 {{ trip.start_date|date:"M j, Y" }}
@@ -26,6 +22,8 @@
                             {% endifequal %}
                         </div>
                         </h2>
+                        <div class="trip clearfix">
+                        
                         {% for photo in trip.get_all_photos %}
                             <div id="{{photo.fs_id}}" class="photo home {% if photo.portrait %} homePortrait {% endif %}" style="background-image:url({{ photo.fs_300 }})"></div>
                         {% endfor %}

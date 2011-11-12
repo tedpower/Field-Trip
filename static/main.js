@@ -7,7 +7,19 @@ $(document).ready(function(){
         window.location.href = "/";
     });
 
+    $('html').click(function() {
+        $('#menubox').hide(); 
+    });
 
+    $('#menubox').click(function(event){
+        event.stopPropagation();
+    });
+
+    $('#menu').click(function(event){
+        event.stopPropagation();
+        $('#menubox').toggle();
+    });
+    
     $(".photo").click(function() {
         currentPhoto = "#l" + $(this).attr('id');
         $(currentPhoto).removeClass('hidden');

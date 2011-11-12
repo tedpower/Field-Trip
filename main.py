@@ -122,7 +122,9 @@ class FourSquareOAuthRequestValid(webapp.RequestHandler):
             currentUser.fs_firstName = self_response['response']['user']['firstName']
             currentUser.fs_lastName = self_response['response']['user']['lastName']
             if 'twitter' in self_response['response']['user']['contact']:
-                currentUser.twitter = self_response['response']['user']['contact']['twitter']        
+                currentUser.twitter = self_response['response']['user']['contact']['twitter']
+            if 'photo' in  self_response['response']['user']:
+                currentUser.fs_profilePic = self_response['response']['user']['photo']
             currentUser.fs_homeCity = self_response['response']['user']['homeCity']
             currentUser.fs_email = self_response['response']['user']['contact']['email']
             currentUser.put()
