@@ -5,7 +5,7 @@ foursquare_creds = {
 }
 
 instagram_creds = {
-    'key' : '8af38bf02def46639a94a68933e46000',
-    'secret' : '9601221ef6be46dea35931460f50c758',
-    'return_url' : 'http://corpodaria.appspot.com/instareturn',
+    'key' : '7aad865476384368b095ad2aa94bdfb4',
+    'secret' : '8048343bb0cc4fcea7b948ac373b92cf',
+    'return_url' : 'http://www.fieldtrip.io/ireturn',
 }

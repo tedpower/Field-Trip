@@ -86,7 +86,7 @@ class InstagramOAuthRequestValid(webapp.RequestHandler):
         cookieUser.ig_token = access_token['access_token']
         cookieUser.put()
         
-        taskqueue.add(url='/worker', params={'key': cookieUser.key().name()})
+        # taskqueue.add(url='/ijustphotos', params={'key': cookieUser.key().name()})
         
         self.redirect("/")
 
@@ -129,7 +129,9 @@ class FourSquareOAuthRequestValid(webapp.RequestHandler):
             currentUser.fs_email = self_response['response']['user']['contact']['email']
             currentUser.put()
                 
-            taskqueue.add(url='/worker', params={'key': currentUser.key().name()})
+            # taskqueue.add(url='/worker', params={'key': currentUser.key().name()})
+            taskqueue.add(url='/justphotos', params={'key': currentUser.key().name()})
+            
         
         # set the cookie!
         self.response.headers.add_header(
@@ -159,7 +161,7 @@ class CounterWorker(webapp.RequestHandler):
         if len(google_response['results']) > 0:
             currentUser.homeCityLat = google_response['results'][0]['geometry']['location']['lat']
             currentUser.homeCityLng = google_response['results'][0]['geometry']['location']['lng']
-        else: 
+        else: # TODO: remove this, sets it ny
             currentUser.homeCityLat = 40.7143528
             currentUser.homeCityLng = -74.00597309999999
             
@@ -364,11 +366,6 @@ def addPhoto(checkin, currentUser, photoIndx, photoCount):
   newPhoto.fs_100 = checkin['photos']['items'][photoIndx]['sizes']['items'][2]['url']
   newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(checkin['createdAt'])
   
-  # figure out if it's portrait or landscape to render it square
-  if newPhoto.width < newPhoto.height:
-    newPhoto.portrait = True;
-  newPhoto.put()
-  
   # add the photo to the user as well, just in case
   currentUser.fs_photos.append(photoID)
   
@@ -506,15 +503,116 @@ class FreshStartWorker(webapp.RequestHandler):
           db.delete(q)
         ############################################################
 
+class JustPhotos(webapp.RequestHandler):
+  def post(self):
+    key = self.request.get('key')
+    currentUser = FS_User.get_by_key_name(key)
+    recursivePhotoPull(currentUser, 0)
+    taskqueue.add(url='/getfriends', params={'key': currentUser.key().name()})
+        
+def recursivePhotoPull(currentUser, indx):
+  indxStart = indx
+  photos_url = "https://api.foursquare.com/v2/users/self/photos?offset=%s&limit=500&oauth_token=%s" % (indx, currentUser.token)
+  photos_json = urlfetch.fetch(photos_url, validate_certificate=False)
+  photos_response = simplejson.loads(photos_json.content)
+  count = photos_response['response']['photos']['count']
+  # TODO if count == 0:
+    # some sort of error handling
+  logging.info('fetching ' + photos_url + " count is " + str(count))
+  for photo in photos_response['response']['photos']['items']:            
+    if 'lat' in photo['venue']['location']:
+      addPhotoEndpoint(photo, currentUser)
+      indx += 1
+      if indx == 20: # quick return to get something up on the screen
+        currentUser.put()
+  if indx < count and indxStart != indx:
+    recursivePhotoPull(currentUser, indx)
+
+# variation of add photos for the /photos endpoint
+def addPhotoEndpoint(photo, currentUser):
+
+  photoID = str(photo['id'])
+  newPhoto = FS_Photo(key_name=photoID)
+  newPhoto.fs_id = photoID
+  newPhoto.fs_venue_name = photo['venue']['name']
+  newPhoto.fs_venue_id = photo['venue']['id']
+  if 'checkin' in photo:
+    newPhoto.fs_checkin_id = photo['checkin']['id']
+    if 'shout' in photo['checkin']:
+      newPhoto.fs_shout = photo['checkin']['shout']
+  if 'address' in photo['venue']['location']:
+    newPhoto.fs_address = photo['venue']['location']['address']
+  if 'crossStreet' in photo['venue']['location']:
+    newPhoto.fs_crossStreet = photo['venue']['location']['crossStreet']
+  if 'city' in photo['venue']['location']:
+    newPhoto.fs_city = photo['venue']['location']['city']
+  if 'state' in photo['venue']['location']:
+    newPhoto.fs_state = photo['venue']['location']['state']
+
+  if 'country' in photo['venue']['location']:
+    newPhoto.fs_country = photo['venue']['location']['country']
+  if 'categories' in photo['venue']:
+    if len(photo['venue']['categories']) > 0:
+      newPhoto.cat_id = photo['venue']['categories'][0]['id']
+      newPhoto.cat_name = photo['venue']['categories'][0]['name']
+  newPhoto.fs_lat = photo['venue']['location']['lat']
+  newPhoto.fs_lng = photo['venue']['location']['lng']
+  newPhoto.photo_url = photo['url']
+  newPhoto.width = photo['sizes']['items'][0]['width']
+  newPhoto.height = photo['sizes']['items'][0]['height']
+  newPhoto.fs_300 = photo['sizes']['items'][1]['url']
+  newPhoto.fs_100 = photo['sizes']['items'][2]['url']
+  newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(photo['createdAt'])
+  newPhoto.put()
+  
+  # add the photo to the user as well, just in case
+  currentUser.fs_photos.append(photoID)
+
+class Preview(webapp.RequestHandler):
+  def get(self):
+    cookieValue = None
+    try:
+        cookieValue = self.request.cookies['corpoCookie']
+    except KeyError:
+        logging.info('no cookie')
+    if cookieValue:
+        cookieUser = FS_User.get_by_key_name(cookieValue)
+        path = os.path.join(os.path.dirname(__file__), 'templates/preview.html')
+        self.response.out.write(template.render(path, {'user' : cookieUser}))
+
+class GetFriends(webapp.RequestHandler):
+  def post(self):
+    key = self.request.get('key')
+    currentUser = FS_User.get_by_key_name(key)
+    recursiveFriendPull(currentUser, 0)
+    currentUser.put()
+    
+def recursiveFriendPull(currentUser, indx):
+  indxStart = indx
+  friends_url = "https://api.foursquare.com/v2/users/self/friends?offset=%s&limit=500&oauth_token=%s" % (indx, currentUser.token)
+  friends_json = urlfetch.fetch(friends_url, validate_certificate=False)
+  friends_response = simplejson.loads(friends_json.content)
+  count = friends_response['response']['friends']['count']
+  logging.info('fetching ' + friends_url + " count is " + str(count))
+  for friend in friends_response['response']['friends']['items']:
+    if friend['relationship'] == 'friend':
+      currentUser.fs_friends.append(friend['id'])      
+    indx += 1
+  if indx < count and indxStart != indx:
+    recursiveFriendPull(currentUser, indx)
+    
 application = webapp.WSGIApplication([('/', Index,),
                                       ('/auth', FourSquareOAuthRequest),
                                       ('/iauth', InstagramOAuthRequest),
                                       ('/settings', Settings),
                                       ('/worker', CounterWorker),
                                       ('/freshstartworker', FreshStartWorker),
+                                      ('/justphotos', JustPhotos),
                                       ('/freshstart', FreshStart),
                                       ('/authreturn', FourSquareOAuthRequestValid),
-                                      ('/instareturn', InstagramOAuthRequestValid)],
+                                      ('/ireturn', InstagramOAuthRequestValid),
+                                      ('/preview', Preview),
+                                      ('/getfriends', GetFriends)],
                                      debug=True)
 
 def main():

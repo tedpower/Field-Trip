@@ -1,7 +1,28 @@
 {% extends "_base.html" %}
 {% block bodycontent %}
 
-{% if user.updated %}
+<div id="photos" class="clearfix">
+
+</div>
+<!-- <p><a href="/iauth">Instagram</a></p> -->
+
+<script>
+function updatePhotos() { 
+$.ajax({
+  url: "/preview",
+  cache: false,
+  success: function(html){
+    $("#photos").html(html);
+  }
+ });
+ if ($(".photo").length == 0) {
+     setTimeout('updatePhotos()', 4000);
+ }
+}
+updatePhotos();
+</script>
+
+<!-- {% if user.updated %}
     <div id="photos" class="clearfix">
         {% for trip in user.get_all_trips %}
                 {% if trip.home and trip.photos %}
@@ -9,7 +30,7 @@
                     <div class="trip clearfix">
                     
                     {% for photo in trip.get_all_photos %}
-                        <div id="{{photo.fs_id}}" class="photo home {% if photo.portrait %} homePortrait {% endif %}" style="background-image:url({{ photo.fs_300 }})"></div>
+                        <div id="{{photo.fs_id}}" class="photo home" style="background-image:url({{ photo.fs_300 }})"></div>
                     {% endfor %}
                 {% else %}
                     {% if not trip.home and trip.photos %}
@@ -25,7 +46,7 @@
                         <div class="trip clearfix">
                         
                         {% for photo in trip.get_all_photos %}
-                            <div id="{{photo.fs_id}}" class="photo home {% if photo.portrait %} homePortrait {% endif %}" style="background-image:url({{ photo.fs_300 }})"></div>
+                            <div id="{{photo.fs_id}}" class="photo home" style="background-image:url({{ photo.fs_300 }})"></div>
                         {% endfor %}
                     {% endif %}
                 {% endif %}
@@ -71,6 +92,6 @@ function updatePage() {
 if (test == false) {
     setTimeout('updatePage()', 4000); 
 }
-</script>
+</script> -->
 
 {% endblock %}

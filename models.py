@@ -23,6 +23,7 @@ class FS_User(db.Model):
     twitter = db.StringProperty()
     last_updated = db.DateTimeProperty(auto_now_add=True)
     updated = db.BooleanProperty(default=False)
+    fs_friends = db.StringListProperty()
 
     @property
     def get_all_photos(self):
@@ -31,6 +32,13 @@ class FS_User(db.Model):
             listOfPhotos.append(FS_Photo.get_by_key_name(photoKey))
         return listOfPhotos
     
+    @property
+    def get_20_photos(self):
+        listOfPhotos = []
+        for photoKey in self.fs_photos[:20]:
+            listOfPhotos.append(FS_Photo.get_by_key_name(photoKey))
+        return listOfPhotos
+        
     @property
     def get_all_ig_photos(self):
         listOfPhotos = []
@@ -46,7 +54,6 @@ class FS_User(db.Model):
         return listOfTrips
 
 class FS_Photo(db.Model):
-    # A foursquare place, with the list of people who've been there
     # key is photo id
     fs_id = db.StringProperty()
     fs_checkin_id = db.StringProperty()
@@ -68,7 +75,6 @@ class FS_Photo(db.Model):
     cat_name = db.StringProperty()
     width = db.IntegerProperty()
     height = db.IntegerProperty()
-    portrait = db.BooleanProperty(default=False)
 
 class IG_Photo(db.Model):
     photo_url = db.StringProperty()

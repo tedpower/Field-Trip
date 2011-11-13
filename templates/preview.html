@@ -1,0 +1,3 @@
+{% for photo in user.get_20_photos %}
+    <div id="{{photo.fs_id}}" class="photo home" style="background-image:url({{ photo.fs_300 }})"></div>
+{% endfor %}
