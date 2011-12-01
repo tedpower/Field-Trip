@@ -29,7 +29,7 @@ class Index(webapp.RequestHandler):
     except KeyError:
         logging.info('no cookie')
     if cookieValue:
-        cookieUser = FS_User.get_by_key_name(cookieValue)
+        cookieUser = User.get_by_key_name(cookieValue)
         path = os.path.join(os.path.dirname(__file__), 'templates/authreturn.html')
         self.response.out.write(template.render(path, {'user' : cookieUser}))
     else:
@@ -49,7 +49,7 @@ class Settings(webapp.RequestHandler):
         except KeyError:
             logging.info('no cookie')
         if cookieValue:
-            cookieUser = FS_User.get_by_key_name(cookieValue)
+            cookieUser = User.get_by_key_name(cookieValue)
             path = os.path.join(os.path.dirname(__file__), 'templates/settings.html')
             self.response.out.write(template.render(path, {'user' : cookieUser}))
         else:
@@ -66,90 +66,112 @@ class InstagramOAuthRequest(webapp.RequestHandler):
         self.redirect("https://api.instagram.com/oauth/authorize/?client_id=%s&redirect_uri=%s&response_type=code" % (instagram_creds['key'], instagram_creds['return_url']))
 
 class InstagramOAuthRequestValid(webapp.RequestHandler):
-    def get(self):
+  def get(self):
+              
+    code = self.request.get('code')
+
+    data = urllib.urlencode({"client_id":instagram_creds['key'],"client_secret":instagram_creds['secret'],"grant_type":"authorization_code","redirect_uri":instagram_creds['return_url'],"code":code})
+    result = urllib.urlopen("https://api.instagram.com/oauth/access_token",data).read()
+    logging.info(result)
+    access_token = simplejson.loads(result)
+
+    query = db.Query(User)
+    query.filter('ig_token =', access_token['access_token'])
+    results = query.fetch(limit=1)
+    if len(results) > 0:
+        logging.info('user exists')
+        currentUser = results[0]
+    else:
+      self_response_url = "https://api.instagram.com/v1/users/self/?access_token=%s" % (access_token['access_token'])
+      self_response_json = urlfetch.fetch(self_response_url, validate_certificate=False)
+      self_response = simplejson.loads(self_response_json.content)
+      
+      cookieValue = None
+      try:
+        cookieValue = self.request.cookies['corpoCookie']
+      except KeyError:
+        logging.info('no cookie')
+      if cookieValue:
+        currentUser = User.get_by_key_name(cookieValue)
+      else:
+        u = uuid.uuid4()        
+        currentUser = User(key_name=str(u))
+      currentUser.ig_token = access_token['access_token']
+      currentUser.ig_id = str(self_response['data']['id'])
+      currentUser.put()
+            
+      taskqueue.add(url='/ig_justphotos', params={'key': currentUser.key().name()})
         
-        cookieValue = None
-        try:
-            cookieValue = self.request.cookies['corpoCookie']
-        except KeyError:
-            logging.info('no cookie')
-        if cookieValue:
-            cookieUser = FS_User.get_by_key_name(cookieValue)
-        
-        code = self.request.get('code')
-        
-        data = urllib.urlencode({"client_id":instagram_creds['key'],"client_secret":instagram_creds['secret'],"grant_type":"authorization_code","redirect_uri":instagram_creds['return_url'],"code":code})
-        result = urllib.urlopen("https://api.instagram.com/oauth/access_token",data).read()
-        logging.info(result)
-        access_token = simplejson.loads(result)
-        
-        cookieUser.ig_token = access_token['access_token']
-        cookieUser.put()
-        
-        # taskqueue.add(url='/ijustphotos', params={'key': cookieUser.key().name()})
-        
-        self.redirect("/")
+    # set the cookie!
+    self.response.headers.add_header(
+          'Set-Cookie', 'corpoCookie=%s; expires=Fri, 31-Dec-2020 23:59:59 GMT' % currentUser.key().name())
+      
+    self.redirect("/")
 
 class FourSquareOAuthRequestValid(webapp.RequestHandler):
   
-    def get(self):
-        
-        startT = datetime.datetime.now()
-        
-        code = self.request.get('code')
-        url = "https://foursquare.com/oauth2/access_token?client_id=%s&client_secret=%s&grant_type=authorization_code&redirect_uri=%s&code=%s" % (foursquare_creds['key'], foursquare_creds['secret'], foursquare_creds['return_url'], code)
-        auth_json = urlfetch.fetch(url, validate_certificate=False)
-        access_token = simplejson.loads(auth_json.content)
+  def get(self):
     
-        # we now have a valid token
-        # this token needs to be included with every API request
-        
-        query = db.Query(FS_User)
-        query.filter('token =', access_token['access_token'])
-        results = query.fetch(limit=1)
-        if len(results) > 0:
-            logging.info('user exists')
-            currentUser = results[0]
-        else:
-            self_response_url = "https://api.foursquare.com/v2/users/self?oauth_token=%s" % (access_token['access_token'])
-            self_response_json = urlfetch.fetch(self_response_url, validate_certificate=False)
-            self_response = simplejson.loads(self_response_json.content)
-        
-            u = uuid.uuid4()        
-            currentUser = FS_User(key_name=str(u))
-            currentUser.token = access_token['access_token']
-            currentUser.fs_id = str(self_response['response']['user']['id'])
-            currentUser.fs_firstName = self_response['response']['user']['firstName']
-            currentUser.fs_lastName = self_response['response']['user']['lastName']
-            if 'twitter' in self_response['response']['user']['contact']:
-                currentUser.twitter = self_response['response']['user']['contact']['twitter']
-            if 'photo' in  self_response['response']['user']:
-                currentUser.fs_profilePic = self_response['response']['user']['photo']
-            currentUser.fs_homeCity = self_response['response']['user']['homeCity']
-            currentUser.fs_email = self_response['response']['user']['contact']['email']
-            currentUser.put()
-                
-            # taskqueue.add(url='/worker', params={'key': currentUser.key().name()})
-            taskqueue.add(url='/justphotos', params={'key': currentUser.key().name()})
-            
-        
-        # set the cookie!
-        self.response.headers.add_header(
-              'Set-Cookie', 'corpoCookie=%s; expires=Fri, 31-Dec-2020 23:59:59 GMT' % currentUser.key().name())
+    startT = datetime.datetime.now()
+    
+    code = self.request.get('code')
+    url = "https://foursquare.com/oauth2/access_token?client_id=%s&client_secret=%s&grant_type=authorization_code&redirect_uri=%s&code=%s" % (foursquare_creds['key'], foursquare_creds['secret'], foursquare_creds['return_url'], code)
+    auth_json = urlfetch.fetch(url, validate_certificate=False)
+    access_token = simplejson.loads(auth_json.content)
+    
+    # we now have a valid token
+    # this token needs to be included with every API request
+    
+    query = db.Query(User)
+    query.filter('token =', access_token['access_token'])
+    results = query.fetch(limit=1)
+    if len(results) > 0:
+      logging.info('user exists')
+      currentUser = results[0]
+    else:
+      self_response_url = "https://api.foursquare.com/v2/users/self?oauth_token=%s" % (access_token['access_token'])
+      self_response_json = urlfetch.fetch(self_response_url, validate_certificate=False)
+      self_response = simplejson.loads(self_response_json.content)
       
-        logging.info("total time of outer thing: " + str(datetime.datetime.now() - startT))
-        
-        self.redirect("/")
+      cookieValue = None
+      try:
+        cookieValue = self.request.cookies['corpoCookie']
+      except KeyError:
+        logging.info('no cookie')
+      if cookieValue:
+        currentUser = User.get_by_key_name(cookieValue)
+      else:
+        u = uuid.uuid4()        
+        currentUser = User(key_name=str(u))
+      
+      currentUser.token = access_token['access_token']
+      currentUser.fs_id = str(self_response['response']['user']['id'])
+      currentUser.fs_firstName = self_response['response']['user']['firstName']
+      currentUser.fs_lastName = self_response['response']['user']['lastName']
+      if 'twitter' in self_response['response']['user']['contact']:
+        currentUser.twitter = self_response['response']['user']['contact']['twitter']
+      if 'photo' in  self_response['response']['user']:
+        currentUser.fs_profilePic = self_response['response']['user']['photo']
+      currentUser.fs_homeCity = self_response['response']['user']['homeCity']
+      currentUser.fs_email = self_response['response']['user']['contact']['email']
+      currentUser.put()
+          
+      # taskqueue.add(url='/worker', params={'key': currentUser.key().name()})
+      taskqueue.add(url='/justphotos', params={'key': currentUser.key().name()})
+      
+    # set the cookie!
+    self.response.headers.add_header(
+          'Set-Cookie', 'corpoCookie=%s; expires=Fri, 31-Dec-2020 23:59:59 GMT' % currentUser.key().name())
+    
+    logging.info("total time of outer thing: " + str(datetime.datetime.now() - startT))
+    
+    self.redirect("/")
 
 
-class CounterWorker(webapp.RequestHandler):
-    def post(self): # should run at most 1/s
+class FindTrips(webapp.RequestHandler):
+    def post(self):
         key = self.request.get('key')
-        
-        startT = datetime.datetime.now()
-        logging.info("1. " + str(startT))
-
-        currentUser = FS_User.get_by_key_name(key)
+        currentUser = User.get_by_key_name(key)
         
         # get the lat long from Google
         homeCitySlug = currentUser.fs_homeCity.replace(" ", "+")
@@ -311,26 +333,6 @@ def fillErUp(currentUser, index, allDates, allPts):
     
     if index < count and prevIndex != index:
         fillErUp(currentUser, index, allDates, allPts)
-
-def fillErUpI(currentUser, allDatesI, allPtsI):
-    
-    self_response_url = "https://api.instagram.com/v1/users/self/media/recent/?access_token=%s" % (currentUser.ig_token)
-    self_response_json = urlfetch.fetch(self_response_url, validate_certificate=False)
-    self_response = simplejson.loads(self_response_json.content)
-    
-    for photo in self_response['data']:
-        if photo['location']:
-            if 'latitude' in photo['location']:
-                photoID = photo['id']
-                newPhoto = IG_Photo(key_name=photoID)
-                newPhoto.photo_url = photo['images']['standard_resolution']['url']
-                newPhoto.ig_createdAt = datetime.datetime.fromtimestamp(float(photo['created_time']))
-                allDatesI.append(float(photo['created_time']))
-                lat = float(photo['location']['latitude'])
-                lng = float(photo['location']['longitude'])
-                allPtsI.append(db.GeoPt(lat=lat,lon=lng))
-                newPhoto.put()
-                currentUser.ig_photos.append(photoID)
     
 # adds a single photo to the datastore, and updates the trip and user with the keys
 def addPhoto(checkin, currentUser, photoIndx, photoCount):
@@ -495,19 +497,51 @@ class FreshStartWorker(webapp.RequestHandler):
         query = db.GqlQuery("SELECT * FROM FS_Photo")
         for q in query:
           db.delete(q)
-        query = db.GqlQuery("SELECT * FROM FS_User")
+        query = db.GqlQuery("SELECT * FROM User")
         for q in query:
           db.delete(q)
         query = db.GqlQuery("SELECT * FROM Trip")
         for q in query:
           db.delete(q)
+        query = db.GqlQuery("SELECT * FROM IG_Photo")
+        for q in query:
+          db.delete(q)
         ############################################################
 
+class IG_JustPhotos(webapp.RequestHandler):
+  def post(self):
+    key = self.request.get('key')
+    currentUser = User.get_by_key_name(key)
+    fillErUpI(currentUser)
+    currentUser.put()
+    
+def fillErUpI(currentUser):
+  self_response_url = "https://api.instagram.com/v1/users/self/media/recent/?access_token=%s" % (currentUser.ig_token)
+  self_response_json = urlfetch.fetch(self_response_url, validate_certificate=False)
+  self_response = simplejson.loads(self_response_json.content)
+  logging.info(self_response_url)
+  
+  for photo in self_response['data']:
+    if photo['location']:
+      if 'latitude' in photo['location']:
+        photoID = photo['id']
+        newPhoto = FS_Photo(key_name=photoID)
+        newPhoto.photo_url = photo['images']['standard_resolution']['url']
+        newPhoto.fs_300 = photo['images']['low_resolution']['url']        
+        newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(float(photo['created_time']))
+        # allDatesI.append(float(photo['created_time']))
+        lat = float(photo['location']['latitude'])
+        lng = float(photo['location']['longitude'])
+        # allPtsI.append(db.GeoPt(lat=lat,lon=lng))
+        newPhoto.put()
+        currentUser.ig_photos.append(photoID)
+                
 class JustPhotos(webapp.RequestHandler):
   def post(self):
     key = self.request.get('key')
-    currentUser = FS_User.get_by_key_name(key)
+    currentUser = User.get_by_key_name(key)
     recursivePhotoPull(currentUser, 0)
+    currentUser.put()
     taskqueue.add(url='/getfriends', params={'key': currentUser.key().name()})
         
 def recursivePhotoPull(currentUser, indx):
@@ -530,7 +564,6 @@ def recursivePhotoPull(currentUser, indx):
 
 # variation of add photos for the /photos endpoint
 def addPhotoEndpoint(photo, currentUser):
-
   photoID = str(photo['id'])
   newPhoto = FS_Photo(key_name=photoID)
   newPhoto.fs_id = photoID
@@ -576,14 +609,30 @@ class Preview(webapp.RequestHandler):
     except KeyError:
         logging.info('no cookie')
     if cookieValue:
-        cookieUser = FS_User.get_by_key_name(cookieValue)
-        path = os.path.join(os.path.dirname(__file__), 'templates/preview.html')
-        self.response.out.write(template.render(path, {'user' : cookieUser}))
+        currentUser = User.get_by_key_name(cookieValue)
+        startAt = int(self.request.get("startAt"))
+        endAt = startAt + 51
+        if currentUser.all_photos:
+          allLen = len(currentUser.all_photos)
+          listOfPhotos = []
+          moreLeft = False
+          if endAt < allLen:
+            moreLeft = True
+          else: 
+            endAt = allLen
+          logging.info("startat is " + str(startAt) + " end is " + str(endAt))
+          for photoKey in currentUser.all_photos[startAt : endAt]:
+              listOfPhotos.append(FS_Photo.get_by_key_name(photoKey))
+          path = os.path.join(os.path.dirname(__file__), 'templates/preview.html')
+          self.response.out.write(template.render(path, {'photos' : listOfPhotos[:-1], 'more': moreLeft, 'startNext': endAt - 1}))
+        else:
+          path = os.path.join(os.path.dirname(__file__), 'templates/preview.html')
+          self.response.out.write(template.render(path, {'loading': True }))
 
 class GetFriends(webapp.RequestHandler):
   def post(self):
     key = self.request.get('key')
-    currentUser = FS_User.get_by_key_name(key)
+    currentUser = User.get_by_key_name(key)
     recursiveFriendPull(currentUser, 0)
     currentUser.put()
     
@@ -600,19 +649,98 @@ def recursiveFriendPull(currentUser, indx):
     indx += 1
   if indx < count and indxStart != indx:
     recursiveFriendPull(currentUser, indx)
-    
+
+# probably make this a taskque
+class MergeIgFs(webapp.RequestHandler):
+  def get(self):
+    cookieValue = None
+    try:
+      cookieValue = self.request.cookies['corpoCookie']
+    except KeyError:
+      logging.info('no cookie')
+    if cookieValue:
+      currentUser = User.get_by_key_name(cookieValue)
+      currentUser.all_photos = []
+      logging.info('hey up here!')
+      
+      if len(currentUser.fs_photos) > 0 and len(currentUser.ig_photos) > 0:
+        logging.info('hey in here')
+        instaIndx = 0
+        ig_photo = FS_Photo.get_by_key_name(currentUser.ig_photos[0])
+        for photoKey in currentUser.fs_photos:
+          logging.info(instaIndx)
+          fs_photo = FS_Photo.get_by_key_name(photoKey)
+          if fs_photo.fs_createdAt > ig_photo.fs_createdAt:
+            currentUser.all_photos.append(photoKey)
+          else:
+            if (instaIndx + 1) < len(currentUser.ig_photos):
+              currentUser.all_photos.append(currentUser.ig_photos[instaIndx])
+              instaIndx += 1
+              ig_photo = FS_Photo.get_by_key_name(currentUser.ig_photos[instaIndx])
+            elif (instaIndx + 1) == len(currentUser.ig_photos):
+              currentUser.all_photos.append(currentUser.ig_photos[instaIndx])
+              instaIndx += 1
+            else:
+              currentUser.all_photos.append(photoKey)
+        while instaIndx < len(currentUser.ig_photos):
+          currentUser.all_photos.append(currentUser.ig_photos[instaIndx])
+          instaIndx += 1
+      elif len(currentUser.fs_photos) > 0 and len(currentUser.ig_photos) == 0:
+        currentUser.all_photos = currentUser.fs_photos
+      elif len(currentUser.fs_photos) == 0 and len(currentUser.ig_photos) > 0:
+        currentUser.all_photos = currentUser.ig_photos
+      currentUser.put()
+    self.redirect("/")
+
+# not using this at the moment
+class UpdateAll(webapp.RequestHandler):
+  def get(self):
+    cookieValue = None
+    try:
+      cookieValue = self.request.cookies['corpoCookie']
+    except KeyError:
+      logging.info('no cookie')
+    if cookieValue:
+      currentUser = User.get_by_key_name(cookieValue)
+      # update instagram -- ?min_timestamp=
+      # update foursquare (need dates)
+      # update merge
+            
+      # get last updated timestamp
+      after = currentUser.last_updated.strftime("%s")
+      logging.info('after is ' + after)
+      
+      checkins_url = "https://api.foursquare.com/v2/users/self/checkins?afterTimestamp=%s&oauth_token=%s" % (after, currentUser.token)
+      checkins_json = urlfetch.fetch(checkins_url, validate_certificate=False)
+      checkins_response = simplejson.loads(checkins_json.content)
+
+      logging.info('fetching ' + checkins_url)
+      for checkin in checkins_response['response']['checkins']['items']:            
+        if 'venue' in checkin:  # we need this check to weed out shouts
+          if 'lat' in checkin['venue']['location']:
+            photoCount = int(checkin['photos']['count'])
+            if photoCount > 0:
+              addPhoto(checkin, currentUser, 0, photoCount)
+              logging.info('hey yo adding ' + str(checkin))
+      currentUser.put()
+      
+      
 application = webapp.WSGIApplication([('/', Index,),
                                       ('/auth', FourSquareOAuthRequest),
                                       ('/iauth', InstagramOAuthRequest),
                                       ('/settings', Settings),
-                                      ('/worker', CounterWorker),
+                                      ('/worker', FindTrips),
                                       ('/freshstartworker', FreshStartWorker),
                                       ('/justphotos', JustPhotos),
+                                      ('/ig_justphotos', IG_JustPhotos),
                                       ('/freshstart', FreshStart),
                                       ('/authreturn', FourSquareOAuthRequestValid),
                                       ('/ireturn', InstagramOAuthRequestValid),
                                       ('/preview', Preview),
-                                      ('/getfriends', GetFriends)],
+                                      ('/getfriends', GetFriends),
+                                      ('/updateAll', UpdateAll),
+                                      ('/findTrips', FindTrips),
+                                      ('/merge', MergeIgFs)],
                                      debug=True)
 
 def main():

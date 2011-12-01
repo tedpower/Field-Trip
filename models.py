@@ -1,13 +1,13 @@
 from google.appengine.ext import db
 import datetime
 
-
-class FS_User(db.Model):
+class User(db.Model):
     # Contains the user to foursquare_id + oauth token mapping
     # the key is currently the token, but shouldn't be
     token = db.StringProperty()
     ig_token = db.StringProperty()
     fs_id = db.StringProperty()
+    ig_id = db.StringProperty()
     fs_firstName = db.StringProperty()
     fs_lastName = db.StringProperty()
     fs_email = db.EmailProperty()
@@ -18,6 +18,7 @@ class FS_User(db.Model):
     fs_profilePic = db.StringProperty()
     fs_photos = db.StringListProperty()
     ig_photos = db.StringListProperty()
+    all_photos = db.StringListProperty()
     photoCount = db.IntegerProperty()
     trips = db.StringListProperty()
     twitter = db.StringProperty()
@@ -28,7 +29,7 @@ class FS_User(db.Model):
     @property
     def get_all_photos(self):
         listOfPhotos = []
-        for photoKey in self.fs_photos:
+        for photoKey in self.all_photos:
             listOfPhotos.append(FS_Photo.get_by_key_name(photoKey))
         return listOfPhotos
     
@@ -43,7 +44,7 @@ class FS_User(db.Model):
     def get_all_ig_photos(self):
         listOfPhotos = []
         for photoKey in self.ig_photos:
-            listOfPhotos.append(IG_Photo.get_by_key_name(photoKey))
+            listOfPhotos.append(FS_Photo.get_by_key_name(photoKey))
         return listOfPhotos
 
     @property

@@ -1,24 +1,30 @@
 {% extends "_base.html" %}
 {% block bodycontent %}
 
-<div id="photos" class="clearfix">
+<div id="photos" class="clearfix"></div>
 
-</div>
-<!-- <p><a href="/iauth">Instagram</a></p> -->
+<div style="padding: 30px"><a href="/iauth">Sign in with instagram</a>
+| <a href="/auth">Sign in with foursquare</a>
+| <a href="/merge">merge instagram and 4sq</a>
+| <a href="/findTrips">Find Trips</a></div>
 
 <script>
-function updatePhotos() { 
-$.ajax({
-  url: "/preview",
-  cache: false,
-  success: function(html){
-    $("#photos").html(html);
-  }
- });
- if ($(".photo").length == 0) {
-     setTimeout('updatePhotos()', 4000);
+function updatePhotos() {
+  $.ajax({
+    url: "/preview?startAt=0",
+    cache: false,
+    success: function(html){
+      $("#photos").append(html);
+    }
+   });
+   // $.ajax({
+   //   url: "/updateAll",
+   //   cache: false,
+   //   success: function(html){
+   //     $("#photos").prepend(html);
+   //   }
+   //  });
  }
-}
 updatePhotos();
 </script>
 
