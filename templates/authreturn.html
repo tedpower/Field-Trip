@@ -1,34 +1,7 @@
 {% extends "_base.html" %}
 {% block bodycontent %}
 
-<div id="photos" class="clearfix"></div>
-
-<div style="padding: 30px"><a href="/iauth">Sign in with instagram</a>
-| <a href="/auth">Sign in with foursquare</a>
-| <a href="/merge">merge instagram and 4sq</a>
-| <a href="/findTrips">Find Trips</a></div>
-
-<script>
-function updatePhotos() {
-  $.ajax({
-    url: "/preview?startAt=0",
-    cache: false,
-    success: function(html){
-      $("#photos").append(html);
-    }
-   });
-   // $.ajax({
-   //   url: "/updateAll",
-   //   cache: false,
-   //   success: function(html){
-   //     $("#photos").prepend(html);
-   //   }
-   //  });
- }
-updatePhotos();
-</script>
-
-<!-- {% if user.updated %}
+{% if user.updated %}
     <div id="photos" class="clearfix">
         {% for trip in user.get_all_trips %}
                 {% if trip.home and trip.photos %}
@@ -36,7 +9,9 @@ updatePhotos();
                     <div class="trip clearfix">
                     
                     {% for photo in trip.get_all_photos %}
+                      {% if not photo.hidden %}
                         <div id="{{photo.fs_id}}" class="photo home" style="background-image:url({{ photo.fs_300 }})"></div>
+                      {% endif %}
                     {% endfor %}
                 {% else %}
                     {% if not trip.home and trip.photos %}
@@ -52,7 +27,9 @@ updatePhotos();
                         <div class="trip clearfix">
                         
                         {% for photo in trip.get_all_photos %}
+                          {% if not photo.hidden %}
                             <div id="{{photo.fs_id}}" class="photo home" style="background-image:url({{ photo.fs_300 }})"></div>
+                          {% endif %}
                         {% endfor %}
                     {% endif %}
                 {% endif %}
@@ -71,8 +48,19 @@ updatePhotos();
                         {% if photo.fs_shout %}
                             <div class="shout"><span class="firstname">{{ user.fs_firstName }}:</span> "{{photo.fs_shout}}"</div>
                         {% endif %}
-                        <a class="venue" href="https://foursquare.com/v/{{photo.fs_venue_id}}">{{photo.fs_venue_name}}</a>
-                        <a class="date" href="https://foursquare.com/{% if user.twitter %}{{ user.twitter }}{% else %}{{ user.fs_id }}{% endif %}/checkin/{{photo.fs_checkin_id}}">{{ photo.fs_createdAt|date:"M j, Y" }}</a>
+                        {% if photo.fs_venue_name and photo.fs_venue_id %}
+                          <a class="venue" href="https://foursquare.com/v/{{photo.fs_venue_id}}">{{photo.fs_venue_name}}</a>
+                        {% else %}
+                          {% if photo.fs_venue_name%}
+                            <div class="venue">{{photo.fs_venue_name}}</div>
+                          {% endif %}
+                        {% endif %}
+                        {% if photo.link %}
+                          <a class="date" href="{{ photo.link }}">{{ photo.fs_createdAt|date:"M j, Y" }}</a>
+                        {% else %}
+                          <div class="date">{{ photo.fs_createdAt|date:"M j, Y" }}</div>
+                        {% endif %}
+                        <a href="/hidePhoto?id={{ photo.fs_id }}">Hide</a>
                     </div>
                 </div>
             </div>
@@ -82,10 +70,30 @@ updatePhotos();
     <div id="end"></div>
     
 {% else %}
-    <p>Updating!</p>
+    <div id="photos" class="clearfix"></div>
+
+    <script>
+    function updatePhotos() {
+      $.ajax({
+        url: "/preview?startAt=0",
+        cache: false,
+        success: function(html){
+          $("#photos").append(html);
+        }
+       });
+       // $.ajax({
+       //   url: "/updateAll",
+       //   cache: false,
+       //   success: function(html){
+       //     $("#photos").prepend(html);
+       //   }
+       //  });
+     }
+    updatePhotos();
+    </script>
 {% endif %}
 
-<script>
+<!-- <script>
 {% if user.updated %}
     var test = true;
 {% else %}
@@ -99,5 +107,11 @@ if (test == false) {
     setTimeout('updatePage()', 4000); 
 }
 </script> -->
+
+
+<div style="padding: 30px"><a href="/ig_auth">Sign in with instagram</a>
+| <a href="/auth">Sign in with foursquare</a>
+| <a href="/merge">merge instagram and 4sq</a>
+| <a href="/findTrips">Find Trips</a></div>
 
 {% endblock %}

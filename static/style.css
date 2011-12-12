@@ -258,14 +258,14 @@ body.loggedin {
     font-weight: bold;
 }
 
-.meta a.venue {
+.meta .venue {
     font-size: 12px;
     display: block;
     padding-top: 10px;
     font-weight: bold;
 }
 
-.meta a.date {
+.meta .date {
     font-size: 12px;
     display: block;
     color: #999999;

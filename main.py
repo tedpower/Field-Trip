@@ -7,6 +7,7 @@ from google.appengine.api import urlfetch
 from google.appengine.api import taskqueue
 from django.utils import simplejson
 from google.appengine.ext.webapp import template
+from operator import itemgetter
 import os
 import logging
 import wsgiref.handlers
@@ -55,17 +56,17 @@ class Settings(webapp.RequestHandler):
         else:
             self.redirect("/")        
         
-class FourSquareOAuthRequest(webapp.RequestHandler):
+class FS_OAuthRequest(webapp.RequestHandler):
 
     def get(self):
         self.redirect("https://foursquare.com/oauth2/authenticate?client_id=%s&response_type=code&redirect_uri=%s" % (foursquare_creds['key'], foursquare_creds['return_url']))
 
-class InstagramOAuthRequest(webapp.RequestHandler):
+class IG_OAuthRequest(webapp.RequestHandler):
 
     def get(self):
         self.redirect("https://api.instagram.com/oauth/authorize/?client_id=%s&redirect_uri=%s&response_type=code" % (instagram_creds['key'], instagram_creds['return_url']))
 
-class InstagramOAuthRequestValid(webapp.RequestHandler):
+class IG_OAuthRequestValid(webapp.RequestHandler):
   def get(self):
               
     code = self.request.get('code')
@@ -108,7 +109,7 @@ class InstagramOAuthRequestValid(webapp.RequestHandler):
       
     self.redirect("/")
 
-class FourSquareOAuthRequestValid(webapp.RequestHandler):
+class FS_OAuthRequestValid(webapp.RequestHandler):
   
   def get(self):
     
@@ -156,8 +157,7 @@ class FourSquareOAuthRequestValid(webapp.RequestHandler):
       currentUser.fs_email = self_response['response']['user']['contact']['email']
       currentUser.put()
           
-      # taskqueue.add(url='/worker', params={'key': currentUser.key().name()})
-      taskqueue.add(url='/justphotos', params={'key': currentUser.key().name()})
+      taskqueue.add(url='/fs_justphotos', params={'key': currentUser.key().name()})
       
     # set the cookie!
     self.response.headers.add_header(
@@ -169,291 +169,257 @@ class FourSquareOAuthRequestValid(webapp.RequestHandler):
 
 
 class FindTrips(webapp.RequestHandler):
-    def post(self):
-        key = self.request.get('key')
-        currentUser = User.get_by_key_name(key)
-        
-        # get the lat long from Google
-        homeCitySlug = currentUser.fs_homeCity.replace(" ", "+")
-        google_url = "http://maps.googleapis.com/maps/api/geocode/json?address=%s&sensor=false" % (homeCitySlug)
-        google_json = urlfetch.fetch(google_url, validate_certificate=False)
-        google_response = simplejson.loads(google_json.content)
-        logging.info(google_url)
-        logging.info(google_response)
-        if len(google_response['results']) > 0:
-            currentUser.homeCityLat = google_response['results'][0]['geometry']['location']['lat']
-            currentUser.homeCityLng = google_response['results'][0]['geometry']['location']['lng']
-        else: # TODO: remove this, sets it ny
-            currentUser.homeCityLat = 40.7143528
-            currentUser.homeCityLng = -74.00597309999999
-            
-        timeChunk = datetime.datetime.now()
-        logging.info("Loading user " + str(timeChunk - startT))
+  def get(self):
+    cookieValue = None
+    try:
+      cookieValue = self.request.cookies['corpoCookie']
+    except KeyError:
+      logging.info('no cookie')
+    if cookieValue:
+      currentUser = User.get_by_key_name(cookieValue)
+      # get the lat long from Google
+      homeCitySlug = currentUser.fs_homeCity.replace(" ", "+")
+      google_url = "http://maps.googleapis.com/maps/api/geocode/json?address=%s&sensor=false" % (homeCitySlug)
+      google_json = urlfetch.fetch(google_url, validate_certificate=False)
+      google_response = simplejson.loads(google_json.content)
+      logging.info(google_url)
+      logging.info(google_response)
+      if len(google_response['results']) > 0:
+        currentUser.homeCityLat = google_response['results'][0]['geometry']['location']['lat']
+        currentUser.homeCityLng = google_response['results'][0]['geometry']['location']['lng']
+      else: # TODO: remove this, sets it ny
+        currentUser.homeCityLat = 40.7143528
+        currentUser.homeCityLng = -74.00597309999999
 
-        # now get the photos!
-        allDates = []
-        allPts = []
-        fillErUp(currentUser, 0, allDates, allPts)
-        
-        # allDatesI = []
-        #       allPtsI = []
-        #       if currentUser.ig_token:
-        #           fillErUpI(currentUser, allDatesI, allPtsI)
-        #       logging.info(allDatesI)
-        #       logging.info(allPtsI)
-        #       currentUser.photoCount = len(currentUser.fs_photos)
-        
-        logging.info("Loading all photos " + str(datetime.datetime.now() - timeChunk))
-        timeChunk = datetime.datetime.now()
-        
-        findTrips(currentUser, allDates, allPts)
-        
-        logging.info("deleting consecutive home trips:  " + str(datetime.datetime.now() - timeChunk))
-        timeChunk = datetime.datetime.now()
-        
-        # Loop through and name the trips
-        for trip in currentUser.trips:
-          thisTrip = Trip.get_by_key_name(trip)
-          if thisTrip.home == False:
-            cities = []
-            countries = []
-            states = []
-            stateShort = False
-            citystate = []
-            newCity = False
-            for photo in thisTrip.photos:
-              thisPhoto = FS_Photo.get_by_key_name(photo)
-              if thisPhoto.cat_id != '4bf58dd8d48988d1ed931735' and thisPhoto.cat_id != '4bf58dd8d48988d1eb931735':
-                google_url = "http://maps.googleapis.com/maps/api/geocode/json?latlng=%s,%s&sensor=false" % (thisPhoto.fs_lat, thisPhoto.fs_lng)
-                google_json = urlfetch.fetch(google_url, validate_certificate=False)
-                google_response = simplejson.loads(google_json.content)
-                if len(google_response['results']) > 0:
-                    firstGeocode = google_response['results'][0]
-                    for component in firstGeocode['address_components']:
-                        for gType in component['types']:
-                            if gType == 'locality':
-                                thisPhoto.fs_city = component['long_name']
-                                if thisPhoto.fs_city not in cities:
-                                    cities.append(thisPhoto.fs_city)
-                                    newCity = component['long_name']
-                            if gType == 'administrative_area_level_1':
-                                thisPhoto.fs_state = component['long_name']
-                                stateShort = component['short_name']
-                                if thisPhoto.fs_state not in states:
-                                    states.append(thisPhoto.fs_state)
-                            if gType == 'country':
-                                thisPhoto.fs_country = component['long_name']
-                                if thisPhoto.fs_country not in countries:
-                                    countries.append(thisPhoto.fs_country)
-                    if newCity:                
-                        if stateShort:
-                            combinedCityState = newCity + ", " + stateShort
-                            citystate.append(combinedCityState)
-                        else:
-                            citystate.append(newCity)
-                    stateShort = False
-                    newCity = False
-                    thisPhoto.put()
-        
-            # logging.info(countries)
-            # logging.info(cities)
-            # logging.info(states)
-            if len(countries) > 1:
-              countries.reverse()
-              thisTrip.title = nameify(thisTrip, countries)
-            elif len(cities) > 0:
-              cities.reverse()
-              thisTrip.title = nameify(thisTrip, citystate)
-            elif len(states) > 0:
-              states.reverse()
-              thisTrip.title = nameify(thisTrip, states)
+      # now get the photos!
+      allDatePts = []
+      fillErUp(currentUser, 0, allDatePts)
+      
+      # mix in dates and points from photos
+      for photo in currentUser.all_photos:
+        currentPhoto = Photo.get_by_key_name(photo)
+        lat = currentPhoto.fs_lat
+        lng = currentPhoto.fs_lng
+        point = db.GeoPt(lat=lat,lon=lng)
+        allDatePts.append((currentPhoto.fs_createdAt, point))
+      
+      # sort it by date, reverse chronological
+      allDatePts = sorted(allDatePts, key=itemgetter(0), reverse=True)
+      
+      findTripRanges(currentUser, allDatePts)
+      
+      # Loop through and name the trips      
+      for trip in currentUser.trips:
+        thisTrip = Trip.get_by_key_name(trip)
+        if thisTrip.home == False:
+          cities = []
+          countries = []
+          states = []
+          stateShort = False
+          citystate = []
+          newCity = False
+          for photo in thisTrip.photos:
+            thisPhoto = Photo.get_by_key_name(photo)
+            city = None
+            subCity = None
+            if thisPhoto.cat_id != '4bf58dd8d48988d1ed931735' and thisPhoto.cat_id != '4bf58dd8d48988d1eb931735':
+              google_url = "http://maps.googleapis.com/maps/api/geocode/json?latlng=%s,%s&sensor=false" % (thisPhoto.fs_lat, thisPhoto.fs_lng)
+              google_json = urlfetch.fetch(google_url, validate_certificate=False)
+              google_response = simplejson.loads(google_json.content)
+              if len(google_response['results']) > 0:
+                firstGeocode = google_response['results'][0]
+                for component in firstGeocode['address_components']:
+                  for gType in component['types']:
+                    if gType == 'locality':
+                      thisPhoto.fs_city = component['long_name']
+                      city = component['long_name']
+                      if thisPhoto.fs_city not in cities:
+                        cities.append(thisPhoto.fs_city)
+                        newCity = component['long_name']
+                    if gType == 'sublocality':
+                      subCity = component['long_name']
+                    if gType == 'administrative_area_level_1':
+                      thisPhoto.fs_state = component['long_name']
+                      stateShort = component['short_name']
+                      if thisPhoto.fs_state not in states:
+                        states.append(thisPhoto.fs_state)
+                    if gType == 'country':
+                      thisPhoto.fs_country = component['long_name']
+                      if thisPhoto.fs_country not in countries:
+                        countries.append(thisPhoto.fs_country)
+                if city is None and subCity is not None:
+                  thisPhoto.fs_city = subCity
+                  if subCity not in cities:
+                    cities.append(subCity)
+                    newCity = subCity
+                if newCity:                
+                  if stateShort:
+                    combinedCityState = newCity + ", " + stateShort
+                    citystate.append(combinedCityState)
+                  else:
+                    citystate.append(newCity)
+                stateShort = False
+                newCity = False
+                thisPhoto.put()
+      
+          logging.info("------------------------------------------")
+          logging.info(cities)
+          logging.info(states)
+          logging.info(citystate)
+          logging.info(countries)
+          logging.info("------------------------------------------")
+          
+          if len(countries) > 1:
+            countries.reverse()
+            thisTrip.title = nameify(thisTrip, countries)
+          elif len(cities) > 0:
+            citystate.reverse()
+            thisTrip.title = nameify(thisTrip, citystate)
+          elif len(states) > 0:
+            states.reverse()
+            thisTrip.title = nameify(thisTrip, states)
+          thisTrip.put()
+      
+      # if there are any airports adjacent to a trip, add them to that trip
+      allTrips = len(currentUser.trips)
+      i = 0
+      while i < (allTrips - 1):
+        thisTrip = Trip.get_by_key_name(currentUser.trips[i])
+        prevTrip = Trip.get_by_key_name(currentUser.trips[i+1])
+        if thisTrip.home and not prevTrip.home and len(thisTrip.photos) > 0:
+          lastPhoto = Photo.get_by_key_name(thisTrip.photos[-1])
+          if lastPhoto.cat_id == '4bf58dd8d48988d1ed931735' or lastPhoto.cat_id == '4bf58dd8d48988d1eb931735':
+            # logging.info('found One')
+            prevTrip.photos.insert(0, thisTrip.photos[-1])
+            thisTrip.photos = thisTrip.photos[0:-1]
+            newLastPhoto = Photo.get_by_key_name(thisTrip.photos[-1])
+            thisTrip.start_date = newLastPhoto.fs_createdAt
+            prevTrip.end_date = lastPhoto.fs_createdAt
             thisTrip.put()
-        
-        logging.info("naming the trips: " + str(datetime.datetime.now() - timeChunk))
-        timeChunk = datetime.datetime.now()
-        
-        # if there are any airports adjacent to a trip, add them to that trip
-        allTrips = len(currentUser.trips)
-        i = 0
-        while i < (allTrips - 1):
-          thisTrip = Trip.get_by_key_name(currentUser.trips[i])
-          prevTrip = Trip.get_by_key_name(currentUser.trips[i+1])
-          if thisTrip.home and not prevTrip.home and len(thisTrip.photos) > 0:
-            lastPhoto = FS_Photo.get_by_key_name(thisTrip.photos[-1])
-            if lastPhoto.cat_id == '4bf58dd8d48988d1ed931735' or lastPhoto.cat_id == '4bf58dd8d48988d1eb931735':
-              # logging.info('found One')
-              prevTrip.photos.insert(0, thisTrip.photos[-1])
-              thisTrip.photos = thisTrip.photos[0:-1]
-              newLastPhoto = FS_Photo.get_by_key_name(thisTrip.photos[-1])
-              thisTrip.start_date = newLastPhoto.fs_createdAt
-              prevTrip.end_date = lastPhoto.fs_createdAt
-              thisTrip.put()
-              prevTrip.put()
-          elif not thisTrip.home and prevTrip.home:
-            firstPhoto = FS_Photo.get_by_key_name(prevTrip.photos[0])
-            if firstPhoto.cat_id == '4bf58dd8d48988d1ed931735' or firstPhoto.cat_id == '4bf58dd8d48988d1eb931735':
-              # logging.info('found another')
-              thisTrip.photos.append(prevTrip.photos[0])
-              prevTrip.photos = prevTrip.photos[1:]
-              thisTrip.start_date = firstPhoto.fs_createdAt
-              newFirstPhoto = FS_Photo.get_by_key_name(thisTrip.photos[0])
-              prevTrip.end_date = newFirstPhoto.fs_createdAt
-              thisTrip.put()
-              prevTrip.put()
-          i += 1
-        
-        logging.info("adding airports to a trip: " + str(datetime.datetime.now() - timeChunk))
-        timeChunk = datetime.datetime.now()
-        logging.info("total time: " + str(datetime.datetime.now() - startT))
-        currentUser.updated = True
-        currentUser.put()
-        # logging.info('wop wop!')
+            prevTrip.put()
+        elif not thisTrip.home and prevTrip.home:
+          firstPhoto = Photo.get_by_key_name(prevTrip.photos[0])
+          if firstPhoto.cat_id == '4bf58dd8d48988d1ed931735' or firstPhoto.cat_id == '4bf58dd8d48988d1eb931735':
+            # logging.info('found another')
+            thisTrip.photos.append(prevTrip.photos[0])
+            prevTrip.photos = prevTrip.photos[1:]
+            thisTrip.start_date = firstPhoto.fs_createdAt
+            newFirstPhoto = Photo.get_by_key_name(thisTrip.photos[0])
+            prevTrip.end_date = newFirstPhoto.fs_createdAt
+            thisTrip.put()
+            prevTrip.put()
+        i += 1
+      
+      currentUser.updated = True
+      currentUser.put()
+      # logging.info('wop wop!')
+      self.redirect("/")
+      
 
 
 # iterates through all checkins from the user, finds photos and groups the into trips
-def fillErUp(currentUser, index, allDates, allPts):
-    
-    prevIndex = index
-    photos_url = "https://api.foursquare.com/v2/users/self/checkins?limit=200&offset=%s&oauth_token=%s" % (index, currentUser.token)
-    photos_json = urlfetch.fetch(photos_url, validate_certificate=False)
-    photos_response = simplejson.loads(photos_json.content)
-    count = photos_response['response']['checkins']['count']
-    logging.info('fetching ' + photos_url + " and index is " + str(index) + "/" + str(count))
-    for item in photos_response['response']['checkins']['items']:  
-        if 'venue' in item:  # we need this check to weed out shouts
-            if 'lat' in item['venue']['location']:
-                photoCount = int(item['photos']['count'])
-                if photoCount > 0:
-                    addPhoto(item, currentUser, 0, photoCount)
-                lat = float(item['venue']['location']['lat'])
-                lng = float(item['venue']['location']['lng'])
-                allDates.append(item['createdAt'])
-                allPts.append(db.GeoPt(lat=lat,lon=lng))
-        index += 1
-    
-    if index < count and prevIndex != index:
-        fillErUp(currentUser, index, allDates, allPts)
-    
-# adds a single photo to the datastore, and updates the trip and user with the keys
-def addPhoto(checkin, currentUser, photoIndx, photoCount):
-
-  photoID = str(checkin['photos']['items'][photoIndx]['id'])
-  newPhoto = FS_Photo(key_name=photoID)
-  newPhoto.fs_id = photoID
-  newPhoto.fs_venue_name = checkin['venue']['name']
-  newPhoto.fs_venue_id = checkin['venue']['id']
-  newPhoto.fs_checkin_id = checkin['id']
-  if 'address' in checkin['venue']['location']:
-    newPhoto.fs_address = checkin['venue']['location']['address']
-  if 'crossStreet' in checkin['venue']['location']:
-    newPhoto.fs_crossStreet = checkin['venue']['location']['crossStreet']
-  if 'city' in checkin['venue']['location']:
-    newPhoto.fs_city = checkin['venue']['location']['city']
-  if 'state' in checkin['venue']['location']:
-    newPhoto.fs_state = checkin['venue']['location']['state']
-  if 'shout' in checkin:
-    newPhoto.fs_shout = checkin['shout']
-  if 'country' in checkin['venue']['location']:
-    newPhoto.fs_country = checkin['venue']['location']['country']
-  if 'categories' in checkin['venue']:
-    if len(checkin['venue']['categories']) > 0:
-      newPhoto.cat_id = checkin['venue']['categories'][0]['id']
-      newPhoto.cat_name = checkin['venue']['categories'][0]['name']
-  newPhoto.fs_lat = checkin['venue']['location']['lat']
-  newPhoto.fs_lng = checkin['venue']['location']['lng']
-  newPhoto.photo_url = checkin['photos']['items'][photoIndx]['url']
-  newPhoto.width = checkin['photos']['items'][photoIndx]['sizes']['items'][0]['width']
-  newPhoto.height = checkin['photos']['items'][photoIndx]['sizes']['items'][0]['height']
-  newPhoto.fs_300 = checkin['photos']['items'][photoIndx]['sizes']['items'][1]['url']
-  newPhoto.fs_100 = checkin['photos']['items'][photoIndx]['sizes']['items'][2]['url']
-  newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(checkin['createdAt'])
+def fillErUp(currentUser, index, allDatePts):
   
-  # add the photo to the user as well, just in case
-  currentUser.fs_photos.append(photoID)
+  prevIndex = index
+  photos_url = "https://api.foursquare.com/v2/users/self/checkins?limit=200&offset=%s&oauth_token=%s" % (index, currentUser.token)
+  photos_json = urlfetch.fetch(photos_url, validate_certificate=False)
+  photos_response = simplejson.loads(photos_json.content)
+  count = photos_response['response']['checkins']['count']
+  logging.info('fetching ' + photos_url + " and index is " + str(index) + "/" + str(count))
+  for item in photos_response['response']['checkins']['items']:  
+    if 'venue' in item:  # we need this check to weed out shouts
+      if 'lat' in item['venue']['location']:
+        lat = float(item['venue']['location']['lat'])
+        lng = float(item['venue']['location']['lng'])
+        allDatePts.append((datetime.datetime.fromtimestamp(item['createdAt']), db.GeoPt(lat=lat,lon=lng)))
+    index += 1
+    
+  if index < count and prevIndex != index:
+    fillErUp(currentUser, index, allDatePts)
+
+def findTripRanges(currentUser, allDatePts):
+  currentTime = allDatePts[0][0]
+  tripKey = "f" + currentUser.fs_id + "d" + str(time.mktime(currentTime.timetuple()))
+  currentTrip = Trip(key_name=tripKey)
+  currentTrip.ongoing = True;
+  prevCheckinDate = allDatePts[0][0]
+  newTrips = []
   
-  photoIndx += 1
-  if photoIndx < photoCount:
-    addPhoto(checkin, currentUser, photoIndx, photoCount)
-
-
-def findTrips(currentUser, allDates, allPts):
-
-    tripKey = "f" + currentUser.fs_id + "d" + str(allDates[0])
-    currentTrip = Trip(key_name=tripKey)
-    currentTrip.ongoing = True;
-    prevCheckinDate = allDates[0]
-    newTrips = []
+  for i in range(len(allDatePts)):
+    cLat = allDatePts[i][1].lat
+    cLng = allDatePts[i][1].lon
+    checkinDstnc = haversine(cLat, cLng, currentUser.homeCityLat, currentUser.homeCityLng)
     
-    for i in range(len(allDates)):
-        cLat = allPts[i].lat
-        cLng = allPts[i].lon
-        checkinDstnc = haversine(cLat, cLng, currentUser.homeCityLat, currentUser.homeCityLng)
-        
-        if checkinDstnc > currentUser.radius and currentTrip.home == True:
-            # hey we're starting a new trip! First wrap up the old one
-            currentTrip.start_date = datetime.datetime.fromtimestamp(prevCheckinDate)
-            currentTrip.put()
-            newTrips.append(currentTrip.key().name())
-            tripKey = "f" + currentUser.fs_id + "d" + str(allDates[i])
-            currentTrip = Trip(key_name=tripKey)
-            currentTrip.end_date = datetime.datetime.fromtimestamp(allDates[i])
-            currentTrip.home = False
-        elif checkinDstnc < currentUser.radius and currentTrip.home == False:
-            # end trip
-            currentTrip.start_date = datetime.datetime.fromtimestamp(prevCheckinDate)
-            currentTrip.put()
-            newTrips.append(currentTrip.key().name())
-            # Start a new trip at home
-            tripKey = "f" + currentUser.fs_id + "d" + str(allDates[i])
-            currentTrip = Trip(key_name=tripKey)
-            currentTrip.end_date = datetime.datetime.fromtimestamp(allDates[i])
-        prevCheckinDate = allDates[i]
-    
-    # add the first trip
-    currentTrip.start_date = datetime.datetime.fromtimestamp(prevCheckinDate)
-    newTrips.append(currentTrip.key().name())
-    currentTrip.put()
-    
-    # now add the photos to the trips
-    tripIndx = 0
-    thisTrip = Trip.get_by_key_name(newTrips[tripIndx])
-    for photo in currentUser.fs_photos:
-        thisPhoto = FS_Photo.get_by_key_name(photo)
-        notAdded = True
-        while notAdded:
-            if thisTrip.start_date <= thisPhoto.fs_createdAt and thisTrip.ongoing == True:
-                thisTrip.photos.append(photo)
-                notAdded = False
-            elif thisTrip.start_date <= thisPhoto.fs_createdAt <= thisTrip.end_date:
-                thisTrip.photos.append(photo)
-                notAdded = False
-            else:
-                thisTrip.put()
-                tripIndx += 1
-                thisTrip = Trip.get_by_key_name(newTrips[tripIndx])
-            
-    # now loop through and delete trips without photos
-    for trip in newTrips:
-        thisTrip = Trip.get_by_key_name(trip)
-        if not thisTrip.photos and not thisTrip.ongoing:
-            thisTrip.delete()
-        else:
-            currentUser.trips.append(trip)
-    
-    # collapse consecutive @home trips
-    i = 0
-    while i < (len(currentUser.trips) - 1):
-        thisTrip = Trip.get_by_key_name(currentUser.trips[i])
-        prevTrip = Trip.get_by_key_name(currentUser.trips[i+1])
-        if thisTrip.home == True and prevTrip.home == True:
-            thisTrip.photos.extend(prevTrip.photos)
-            thisTrip.start_date = prevTrip.start_date
-            thisTrip.put()
-            prevTrip.delete()
-            currentUser.trips.remove(currentUser.trips[i+1])
-        else:
-            i += 1
-
+    if checkinDstnc > currentUser.radius and currentTrip.home == True:
+      # hey we're starting a new trip! First wrap up the old one
+      currentTrip.start_date = prevCheckinDate
+      currentTrip.put()
+      newTrips.append(currentTrip.key().name())
+      currentTime = allDatePts[i][0]
+      tripKey = "f" + currentUser.fs_id + "d" + str(time.mktime(currentTime.timetuple()))
+      currentTrip = Trip(key_name=tripKey)
+      currentTrip.end_date = allDatePts[i][0]
+      currentTrip.home = False
+    elif checkinDstnc < currentUser.radius and currentTrip.home == False:
+      # end trip
+      currentTrip.start_date = prevCheckinDate
+      currentTrip.put()
+      newTrips.append(currentTrip.key().name())
+      # Start a new trip at home
+      currentTime = allDatePts[i][0]
+      tripKey = "f" + currentUser.fs_id + "d" + str(time.mktime(currentTime.timetuple()))
+      currentTrip = Trip(key_name=tripKey)
+      currentTrip.end_date = allDatePts[i][0]
+    prevCheckinDate = allDatePts[i][0]
+  
+  # add the first trip
+  currentTrip.start_date = prevCheckinDate
+  newTrips.append(currentTrip.key().name())
+  currentTrip.put()
+  
+  # now add the photos to the trips
+  tripIndx = 0
+  photoCount = 0
+  thisTrip = Trip.get_by_key_name(newTrips[tripIndx])
+  for photo in currentUser.all_photos:
+    thisPhoto = Photo.get_by_key_name(photo)
+    notAdded = True
+    photoCount += 1
+    while notAdded:
+      if thisTrip.start_date <= thisPhoto.fs_createdAt and thisTrip.ongoing == True:
+        thisTrip.photos.append(photo)
+        notAdded = False
+      elif thisTrip.start_date <= thisPhoto.fs_createdAt <= thisTrip.end_date:
+        thisTrip.photos.append(photo)
+        notAdded = False
+      else:
+        thisTrip.put()
+        tripIndx += 1
+        thisTrip = Trip.get_by_key_name(newTrips[tripIndx])
+    thisTrip.put()
+          
+  # now loop through and delete trips without photos
+  for trip in newTrips:
+    thisTrip = Trip.get_by_key_name(trip)
+    if not thisTrip.photos and not thisTrip.ongoing:
+      thisTrip.delete()
+    else:
+      currentUser.trips.append(trip)
+  
+  # collapse consecutive @home trips
+  i = 0
+  while i < (len(currentUser.trips) - 1):
+    thisTrip = Trip.get_by_key_name(currentUser.trips[i])
+    prevTrip = Trip.get_by_key_name(currentUser.trips[i+1])
+    if thisTrip.home == True and prevTrip.home == True:
+      thisTrip.photos.extend(prevTrip.photos)
+      thisTrip.start_date = prevTrip.start_date
+      thisTrip.put()
+      prevTrip.delete()
+      currentUser.trips.remove(currentUser.trips[i+1])
+    else:
+      i += 1
+  
     
 def nameify(trip, places):
     title = ""
@@ -494,7 +460,7 @@ class FreshStart(webapp.RequestHandler):
 class FreshStartWorker(webapp.RequestHandler):
     def post(self):
         ######### DANGER! this empties the datastore ##############
-        query = db.GqlQuery("SELECT * FROM FS_Photo")
+        query = db.GqlQuery("SELECT * FROM Photo")
         for q in query:
           db.delete(q)
         query = db.GqlQuery("SELECT * FROM User")
@@ -525,18 +491,24 @@ def fillErUpI(currentUser):
     if photo['location']:
       if 'latitude' in photo['location']:
         photoID = photo['id']
-        newPhoto = FS_Photo(key_name=photoID)
+        newPhoto = Photo(key_name=photoID)
+        newPhoto.fs_id = photoID
         newPhoto.photo_url = photo['images']['standard_resolution']['url']
+        newPhoto.width = photo['images']['standard_resolution']['width']
+        newPhoto.height = photo['images']['standard_resolution']['height']
         newPhoto.fs_300 = photo['images']['low_resolution']['url']        
         newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(float(photo['created_time']))
-        # allDatesI.append(float(photo['created_time']))
-        lat = float(photo['location']['latitude'])
-        lng = float(photo['location']['longitude'])
-        # allPtsI.append(db.GeoPt(lat=lat,lon=lng))
+        newPhoto.fs_lat = float(photo['location']['latitude'])
+        newPhoto.fs_lng = float(photo['location']['longitude'])
+        if 'name' in photo['location']:
+          newPhoto.fs_venue_name = photo['location']['name']
+        if photo['caption'] is not None:
+          newPhoto.fs_shout = photo['caption']['text']
+        newPhoto.link = photo['link']
         newPhoto.put()
         currentUser.ig_photos.append(photoID)
                 
-class JustPhotos(webapp.RequestHandler):
+class FS_JustPhotos(webapp.RequestHandler):
   def post(self):
     key = self.request.get('key')
     currentUser = User.get_by_key_name(key)
@@ -565,12 +537,18 @@ def recursivePhotoPull(currentUser, indx):
 # variation of add photos for the /photos endpoint
 def addPhotoEndpoint(photo, currentUser):
   photoID = str(photo['id'])
-  newPhoto = FS_Photo(key_name=photoID)
+  newPhoto = Photo(key_name=photoID)
   newPhoto.fs_id = photoID
   newPhoto.fs_venue_name = photo['venue']['name']
   newPhoto.fs_venue_id = photo['venue']['id']
   if 'checkin' in photo:
     newPhoto.fs_checkin_id = photo['checkin']['id']
+    userPath = ""
+    if currentUser.twitter:
+      userPath = currentUser.twitter
+    else:
+      userPath = currentUser.fs_id
+    newPhoto.link = "https://foursquare.com/%s/checkin/%s" % (userPath, newPhoto.fs_checkin_id)
     if 'shout' in photo['checkin']:
       newPhoto.fs_shout = photo['checkin']['shout']
   if 'address' in photo['venue']['location']:
@@ -581,7 +559,6 @@ def addPhotoEndpoint(photo, currentUser):
     newPhoto.fs_city = photo['venue']['location']['city']
   if 'state' in photo['venue']['location']:
     newPhoto.fs_state = photo['venue']['location']['state']
-
   if 'country' in photo['venue']['location']:
     newPhoto.fs_country = photo['venue']['location']['country']
   if 'categories' in photo['venue']:
@@ -594,7 +571,6 @@ def addPhotoEndpoint(photo, currentUser):
   newPhoto.width = photo['sizes']['items'][0]['width']
   newPhoto.height = photo['sizes']['items'][0]['height']
   newPhoto.fs_300 = photo['sizes']['items'][1]['url']
-  newPhoto.fs_100 = photo['sizes']['items'][2]['url']
   newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(photo['createdAt'])
   newPhoto.put()
   
@@ -622,7 +598,7 @@ class Preview(webapp.RequestHandler):
             endAt = allLen
           logging.info("startat is " + str(startAt) + " end is " + str(endAt))
           for photoKey in currentUser.all_photos[startAt : endAt]:
-              listOfPhotos.append(FS_Photo.get_by_key_name(photoKey))
+              listOfPhotos.append(Photo.get_by_key_name(photoKey))
           path = os.path.join(os.path.dirname(__file__), 'templates/preview.html')
           self.response.out.write(template.render(path, {'photos' : listOfPhotos[:-1], 'more': moreLeft, 'startNext': endAt - 1}))
         else:
@@ -666,17 +642,17 @@ class MergeIgFs(webapp.RequestHandler):
       if len(currentUser.fs_photos) > 0 and len(currentUser.ig_photos) > 0:
         logging.info('hey in here')
         instaIndx = 0
-        ig_photo = FS_Photo.get_by_key_name(currentUser.ig_photos[0])
+        ig_photo = Photo.get_by_key_name(currentUser.ig_photos[0])
         for photoKey in currentUser.fs_photos:
           logging.info(instaIndx)
-          fs_photo = FS_Photo.get_by_key_name(photoKey)
+          fs_photo = Photo.get_by_key_name(photoKey)
           if fs_photo.fs_createdAt > ig_photo.fs_createdAt:
             currentUser.all_photos.append(photoKey)
           else:
             if (instaIndx + 1) < len(currentUser.ig_photos):
               currentUser.all_photos.append(currentUser.ig_photos[instaIndx])
               instaIndx += 1
-              ig_photo = FS_Photo.get_by_key_name(currentUser.ig_photos[instaIndx])
+              ig_photo = Photo.get_by_key_name(currentUser.ig_photos[instaIndx])
             elif (instaIndx + 1) == len(currentUser.ig_photos):
               currentUser.all_photos.append(currentUser.ig_photos[instaIndx])
               instaIndx += 1
@@ -690,11 +666,11 @@ class MergeIgFs(webapp.RequestHandler):
       elif len(currentUser.fs_photos) == 0 and len(currentUser.ig_photos) > 0:
         currentUser.all_photos = currentUser.ig_photos
       currentUser.put()
-    self.redirect("/")
+    self.redirect("/")      
 
-# not using this at the moment
-class UpdateAll(webapp.RequestHandler):
+class HidePhoto(webapp.RequestHandler):
   def get(self):
+    photoID = self.request.get('id')
     cookieValue = None
     try:
       cookieValue = self.request.cookies['corpoCookie']
@@ -702,44 +678,31 @@ class UpdateAll(webapp.RequestHandler):
       logging.info('no cookie')
     if cookieValue:
       currentUser = User.get_by_key_name(cookieValue)
-      # update instagram -- ?min_timestamp=
-      # update foursquare (need dates)
-      # update merge
-            
-      # get last updated timestamp
-      after = currentUser.last_updated.strftime("%s")
-      logging.info('after is ' + after)
-      
-      checkins_url = "https://api.foursquare.com/v2/users/self/checkins?afterTimestamp=%s&oauth_token=%s" % (after, currentUser.token)
-      checkins_json = urlfetch.fetch(checkins_url, validate_certificate=False)
-      checkins_response = simplejson.loads(checkins_json.content)
+      thisPhoto = Photo.get_by_key_name(photoID)
+      thisPhoto.hidden = True
+      thisPhoto.put()
+      # thisTrip.put()
 
-      logging.info('fetching ' + checkins_url)
-      for checkin in checkins_response['response']['checkins']['items']:            
-        if 'venue' in checkin:  # we need this check to weed out shouts
-          if 'lat' in checkin['venue']['location']:
-            photoCount = int(checkin['photos']['count'])
-            if photoCount > 0:
-              addPhoto(checkin, currentUser, 0, photoCount)
-              logging.info('hey yo adding ' + str(checkin))
-      currentUser.put()
-      
-      
+    # remove it from the trip... probably also need a check to only render trips with at least 1 photo
+    # rename the trip... there should be a way to look up which trip each photo belongs to
+    # 
+    # or maybe do it with a hidden count on the trip, if it's < then show the trip? prob. not if we care about naming
+    # in the javascript ajax remove the photo and the preview
+    
 application = webapp.WSGIApplication([('/', Index,),
-                                      ('/auth', FourSquareOAuthRequest),
-                                      ('/iauth', InstagramOAuthRequest),
-                                      ('/settings', Settings),
-                                      ('/worker', FindTrips),
-                                      ('/freshstartworker', FreshStartWorker),
-                                      ('/justphotos', JustPhotos),
+                                      ('/fs_auth', FS_OAuthRequest),
+                                      ('/ig_auth', IG_OAuthRequest),
+                                      ('/fs_authreturn', FS_OAuthRequestValid),
+                                      ('/ig_authreturn', IG_OAuthRequestValid),
+                                      ('/fs_justphotos', FS_JustPhotos),
                                       ('/ig_justphotos', IG_JustPhotos),
+                                      ('/settings', Settings),
                                       ('/freshstart', FreshStart),
-                                      ('/authreturn', FourSquareOAuthRequestValid),
-                                      ('/ireturn', InstagramOAuthRequestValid),
+                                      ('/freshstartworker', FreshStartWorker),
                                       ('/preview', Preview),
                                       ('/getfriends', GetFriends),
-                                      ('/updateAll', UpdateAll),
                                       ('/findTrips', FindTrips),
+                                      ('/hidePhoto', HidePhoto),
                                       ('/merge', MergeIgFs)],
                                      debug=True)
 
