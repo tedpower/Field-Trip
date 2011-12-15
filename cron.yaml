@@ -1,0 +1,4 @@
+cron:
+- description: update all photos
+  url: /updateAllPhotos
+  schedule: every 20 minutes

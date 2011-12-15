@@ -7,15 +7,15 @@
                 {% if trip.home and trip.photos %}
                     <h2>Home in {{user.fs_homeCity}}</h2>
                     <div class="trip clearfix">
-                    
+
                     {% for photo in trip.get_all_photos %}
                       {% if not photo.hidden %}
-                        <div id="{{photo.fs_id}}" class="photo home" style="background-image:url({{ photo.fs_300 }})"></div>
+                        <div id="{{photo.key_id}}" class="photo home" style="background-image:url({{ photo.fs_300 }})"></div>
                       {% endif %}
                     {% endfor %}
                 {% else %}
                     {% if not trip.home and trip.photos %}
-                        <h2>{{ trip.title }}                            
+                        <h2>{{ trip.title }}
                         <div class="date">
                             {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
                                 {{ trip.start_date|date:"M j, Y" }}
@@ -25,10 +25,10 @@
                         </div>
                         </h2>
                         <div class="trip clearfix">
-                        
+
                         {% for photo in trip.get_all_photos %}
                           {% if not photo.hidden %}
-                            <div id="{{photo.fs_id}}" class="photo home" style="background-image:url({{ photo.fs_300 }})"></div>
+                            <div id="{{photo.key_id}}" class="photo home" style="background-image:url({{ photo.fs_300 }})"></div>
                           {% endif %}
                         {% endfor %}
                     {% endif %}
@@ -36,17 +36,17 @@
             </div>
         {% endfor %}
     </div>
-    
+
     <div id="hide" class="invisible"></div>
 
     {% for trip in user.get_all_trips %}
         {% for photo in trip.get_all_photos %}
-            <div id="l{{photo.fs_id}}"  class="lightbox hidden">
+            <div id="l{{photo.key_id}}"  class="lightbox hidden">
                 <div class="zoomContent" style="width:{{ photo.width }}px;">
                     <img src="{{ photo.photo_url }}">
                     <div class="meta" style="width:{{ photo.width }}px;">
-                        {% if photo.fs_shout %}
-                            <div class="shout"><span class="firstname">{{ user.fs_firstName }}:</span> "{{photo.fs_shout}}"</div>
+                        {% if photo.shout %}
+                            <div class="shout"><span class="firstname">{{ user.fs_firstName }}:</span> "{{photo.shout}}"</div>
                         {% endif %}
                         {% if photo.fs_venue_name and photo.fs_venue_id %}
                           <a class="venue" href="https://foursquare.com/v/{{photo.fs_venue_id}}">{{photo.fs_venue_name}}</a>
@@ -60,7 +60,7 @@
                         {% else %}
                           <div class="date">{{ photo.fs_createdAt|date:"M j, Y" }}</div>
                         {% endif %}
-                        <a href="/hidePhoto?id={{ photo.fs_id }}">Hide</a>
+                        <a href="/hidePhoto?id={{ photo.key_id }}">Hide</a>
                     </div>
                 </div>
             </div>
@@ -68,7 +68,7 @@
     {% endfor %}
 
     <div id="end"></div>
-    
+
 {% else %}
     <div id="photos" class="clearfix"></div>
 
@@ -100,17 +100,17 @@
     var test = false;
 {% endif %}
 
-function updatePage() { 
+function updatePage() {
     location.reload(true);
 }
 if (test == false) {
-    setTimeout('updatePage()', 4000); 
+    setTimeout('updatePage()', 4000);
 }
 </script> -->
 
 
 <div style="padding: 30px"><a href="/ig_auth">Sign in with instagram</a>
-| <a href="/auth">Sign in with foursquare</a>
+| <a href="/fs_auth">Sign in with foursquare</a>
 | <a href="/merge">merge instagram and 4sq</a>
 | <a href="/findTrips">Find Trips</a></div>
 

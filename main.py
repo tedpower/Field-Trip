@@ -7,7 +7,7 @@ from google.appengine.api import urlfetch
 from google.appengine.api import taskqueue
 from django.utils import simplejson
 from google.appengine.ext.webapp import template
-from operator import itemgetter
+from operator import itemgetter, attrgetter
 import os
 import logging
 import wsgiref.handlers
@@ -40,7 +40,7 @@ class Index(webapp.RequestHandler):
   def post(self):
       """Handle data posted from main form"""
       pass
-      
+
 class Settings(webapp.RequestHandler):
 
     def get(self):
@@ -54,8 +54,8 @@ class Settings(webapp.RequestHandler):
             path = os.path.join(os.path.dirname(__file__), 'templates/settings.html')
             self.response.out.write(template.render(path, {'user' : cookieUser}))
         else:
-            self.redirect("/")        
-        
+            self.redirect("/")
+
 class FS_OAuthRequest(webapp.RequestHandler):
 
     def get(self):
@@ -68,7 +68,7 @@ class IG_OAuthRequest(webapp.RequestHandler):
 
 class IG_OAuthRequestValid(webapp.RequestHandler):
   def get(self):
-              
+
     code = self.request.get('code')
 
     data = urllib.urlencode({"client_id":instagram_creds['key'],"client_secret":instagram_creds['secret'],"grant_type":"authorization_code","redirect_uri":instagram_creds['return_url'],"code":code})
@@ -86,7 +86,7 @@ class IG_OAuthRequestValid(webapp.RequestHandler):
       self_response_url = "https://api.instagram.com/v1/users/self/?access_token=%s" % (access_token['access_token'])
       self_response_json = urlfetch.fetch(self_response_url, validate_certificate=False)
       self_response = simplejson.loads(self_response_json.content)
-      
+
       cookieValue = None
       try:
         cookieValue = self.request.cookies['corpoCookie']
@@ -95,36 +95,33 @@ class IG_OAuthRequestValid(webapp.RequestHandler):
       if cookieValue:
         currentUser = User.get_by_key_name(cookieValue)
       else:
-        u = uuid.uuid4()        
+        u = uuid.uuid4()
         currentUser = User(key_name=str(u))
       currentUser.ig_token = access_token['access_token']
       currentUser.ig_id = str(self_response['data']['id'])
       currentUser.put()
-            
+
       taskqueue.add(url='/ig_justphotos', params={'key': currentUser.key().name()})
-        
+
     # set the cookie!
     self.response.headers.add_header(
           'Set-Cookie', 'corpoCookie=%s; expires=Fri, 31-Dec-2020 23:59:59 GMT' % currentUser.key().name())
-      
+
     self.redirect("/")
 
 class FS_OAuthRequestValid(webapp.RequestHandler):
-  
   def get(self):
-    
-    startT = datetime.datetime.now()
-    
     code = self.request.get('code')
     url = "https://foursquare.com/oauth2/access_token?client_id=%s&client_secret=%s&grant_type=authorization_code&redirect_uri=%s&code=%s" % (foursquare_creds['key'], foursquare_creds['secret'], foursquare_creds['return_url'], code)
-    auth_json = urlfetch.fetch(url, validate_certificate=False)
+    logging.info(url)
+    auth_json = urlfetch.fetch(url, method=urlfetch.GET, deadline=10)
     access_token = simplejson.loads(auth_json.content)
-    
+
     # we now have a valid token
     # this token needs to be included with every API request
-    
+
     query = db.Query(User)
-    query.filter('token =', access_token['access_token'])
+    query.filter('fs_token =', access_token['access_token'])
     results = query.fetch(limit=1)
     if len(results) > 0:
       logging.info('user exists')
@@ -133,7 +130,7 @@ class FS_OAuthRequestValid(webapp.RequestHandler):
       self_response_url = "https://api.foursquare.com/v2/users/self?oauth_token=%s" % (access_token['access_token'])
       self_response_json = urlfetch.fetch(self_response_url, validate_certificate=False)
       self_response = simplejson.loads(self_response_json.content)
-      
+
       cookieValue = None
       try:
         cookieValue = self.request.cookies['corpoCookie']
@@ -142,10 +139,10 @@ class FS_OAuthRequestValid(webapp.RequestHandler):
       if cookieValue:
         currentUser = User.get_by_key_name(cookieValue)
       else:
-        u = uuid.uuid4()        
+        u = uuid.uuid4()
         currentUser = User(key_name=str(u))
-      
-      currentUser.token = access_token['access_token']
+
+      currentUser.fs_token = access_token['access_token']
       currentUser.fs_id = str(self_response['response']['user']['id'])
       currentUser.fs_firstName = self_response['response']['user']['firstName']
       currentUser.fs_lastName = self_response['response']['user']['lastName']
@@ -156,15 +153,13 @@ class FS_OAuthRequestValid(webapp.RequestHandler):
       currentUser.fs_homeCity = self_response['response']['user']['homeCity']
       currentUser.fs_email = self_response['response']['user']['contact']['email']
       currentUser.put()
-          
+
       taskqueue.add(url='/fs_justphotos', params={'key': currentUser.key().name()})
-      
+
     # set the cookie!
     self.response.headers.add_header(
           'Set-Cookie', 'corpoCookie=%s; expires=Fri, 31-Dec-2020 23:59:59 GMT' % currentUser.key().name())
-    
-    logging.info("total time of outer thing: " + str(datetime.datetime.now() - startT))
-    
+
     self.redirect("/")
 
 
@@ -193,8 +188,8 @@ class FindTrips(webapp.RequestHandler):
 
       # now get the photos!
       allDatePts = []
-      fillErUp(currentUser, 0, allDatePts)
-      
+      getDatePts(currentUser, 0, allDatePts)
+
       # mix in dates and points from photos
       for photo in currentUser.all_photos:
         currentPhoto = Photo.get_by_key_name(photo)
@@ -202,13 +197,13 @@ class FindTrips(webapp.RequestHandler):
         lng = currentPhoto.fs_lng
         point = db.GeoPt(lat=lat,lon=lng)
         allDatePts.append((currentPhoto.fs_createdAt, point))
-      
+
       # sort it by date, reverse chronological
       allDatePts = sorted(allDatePts, key=itemgetter(0), reverse=True)
-      
+
       findTripRanges(currentUser, allDatePts)
-      
-      # Loop through and name the trips      
+
+      # Loop through and name the trips
       for trip in currentUser.trips:
         thisTrip = Trip.get_by_key_name(trip)
         if thisTrip.home == False:
@@ -252,7 +247,7 @@ class FindTrips(webapp.RequestHandler):
                   if subCity not in cities:
                     cities.append(subCity)
                     newCity = subCity
-                if newCity:                
+                if newCity:
                   if stateShort:
                     combinedCityState = newCity + ", " + stateShort
                     citystate.append(combinedCityState)
@@ -261,14 +256,14 @@ class FindTrips(webapp.RequestHandler):
                 stateShort = False
                 newCity = False
                 thisPhoto.put()
-      
+
           logging.info("------------------------------------------")
           logging.info(cities)
           logging.info(states)
           logging.info(citystate)
           logging.info(countries)
           logging.info("------------------------------------------")
-          
+
           if len(countries) > 1:
             countries.reverse()
             thisTrip.title = nameify(thisTrip, countries)
@@ -279,7 +274,7 @@ class FindTrips(webapp.RequestHandler):
             states.reverse()
             thisTrip.title = nameify(thisTrip, states)
           thisTrip.put()
-      
+
       # if there are any airports adjacent to a trip, add them to that trip
       allTrips = len(currentUser.trips)
       i = 0
@@ -309,54 +304,52 @@ class FindTrips(webapp.RequestHandler):
             thisTrip.put()
             prevTrip.put()
         i += 1
-      
+
       currentUser.updated = True
       currentUser.put()
       # logging.info('wop wop!')
       self.redirect("/")
-      
 
 
-# iterates through all checkins from the user, finds photos and groups the into trips
-def fillErUp(currentUser, index, allDatePts):
-  
+# iterates through all checkins from the user
+def getDatePts(currentUser, index, allDatePts):
   prevIndex = index
-  photos_url = "https://api.foursquare.com/v2/users/self/checkins?limit=200&offset=%s&oauth_token=%s" % (index, currentUser.token)
+  photos_url = "https://api.foursquare.com/v2/users/self/checkins?limit=200&offset=%s&oauth_token=%s" % (index, currentUser.fs_token)
   photos_json = urlfetch.fetch(photos_url, validate_certificate=False)
   photos_response = simplejson.loads(photos_json.content)
   count = photos_response['response']['checkins']['count']
   logging.info('fetching ' + photos_url + " and index is " + str(index) + "/" + str(count))
-  for item in photos_response['response']['checkins']['items']:  
+  for item in photos_response['response']['checkins']['items']:
     if 'venue' in item:  # we need this check to weed out shouts
       if 'lat' in item['venue']['location']:
         lat = float(item['venue']['location']['lat'])
         lng = float(item['venue']['location']['lng'])
         allDatePts.append((datetime.datetime.fromtimestamp(item['createdAt']), db.GeoPt(lat=lat,lon=lng)))
     index += 1
-    
   if index < count and prevIndex != index:
-    fillErUp(currentUser, index, allDatePts)
+    getDatePts(currentUser, index, allDatePts)
+
 
 def findTripRanges(currentUser, allDatePts):
   currentTime = allDatePts[0][0]
-  tripKey = "f" + currentUser.fs_id + "d" + str(time.mktime(currentTime.timetuple()))
+  tripKey = "f" + currentUser.fs_id + "d" + currentTime.strftime('%s')
   currentTrip = Trip(key_name=tripKey)
   currentTrip.ongoing = True;
   prevCheckinDate = allDatePts[0][0]
   newTrips = []
-  
+
   for i in range(len(allDatePts)):
     cLat = allDatePts[i][1].lat
     cLng = allDatePts[i][1].lon
     checkinDstnc = haversine(cLat, cLng, currentUser.homeCityLat, currentUser.homeCityLng)
-    
+
     if checkinDstnc > currentUser.radius and currentTrip.home == True:
       # hey we're starting a new trip! First wrap up the old one
       currentTrip.start_date = prevCheckinDate
       currentTrip.put()
       newTrips.append(currentTrip.key().name())
       currentTime = allDatePts[i][0]
-      tripKey = "f" + currentUser.fs_id + "d" + str(time.mktime(currentTime.timetuple()))
+      tripKey = "f" + currentUser.fs_id + "d" + currentTime.strftime('%s')
       currentTrip = Trip(key_name=tripKey)
       currentTrip.end_date = allDatePts[i][0]
       currentTrip.home = False
@@ -367,16 +360,16 @@ def findTripRanges(currentUser, allDatePts):
       newTrips.append(currentTrip.key().name())
       # Start a new trip at home
       currentTime = allDatePts[i][0]
-      tripKey = "f" + currentUser.fs_id + "d" + str(time.mktime(currentTime.timetuple()))
+      tripKey = "f" + currentUser.fs_id + "d" + currentTime.strftime('%s')
       currentTrip = Trip(key_name=tripKey)
       currentTrip.end_date = allDatePts[i][0]
     prevCheckinDate = allDatePts[i][0]
-  
+
   # add the first trip
   currentTrip.start_date = prevCheckinDate
   newTrips.append(currentTrip.key().name())
   currentTrip.put()
-  
+
   # now add the photos to the trips
   tripIndx = 0
   photoCount = 0
@@ -397,7 +390,7 @@ def findTripRanges(currentUser, allDatePts):
         tripIndx += 1
         thisTrip = Trip.get_by_key_name(newTrips[tripIndx])
     thisTrip.put()
-          
+
   # now loop through and delete trips without photos
   for trip in newTrips:
     thisTrip = Trip.get_by_key_name(trip)
@@ -405,7 +398,7 @@ def findTripRanges(currentUser, allDatePts):
       thisTrip.delete()
     else:
       currentUser.trips.append(trip)
-  
+
   # collapse consecutive @home trips
   i = 0
   while i < (len(currentUser.trips) - 1):
@@ -419,8 +412,8 @@ def findTripRanges(currentUser, allDatePts):
       currentUser.trips.remove(currentUser.trips[i+1])
     else:
       i += 1
-  
-    
+
+
 def nameify(trip, places):
     title = ""
     placeCount = len(places)
@@ -436,26 +429,29 @@ def nameify(trip, places):
         title = startChunk + endChunk
     return title
 
+
 def haversine(lat1, lon1, lat2, lon2):
     """
-    Calculate the great circle distance between two points 
+    Calculate the great circle distance between two points
     on the earth (specified in decimal degrees)
     """
-    # convert decimal degrees to radians 
+    # convert decimal degrees to radians
     lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-    # haversine formula 
-    dlon = lon2 - lon1 
-    dlat = lat2 - lat1 
+    # haversine formula
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
     a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * atan2(sqrt(a), sqrt(1-a)) 
+    c = 2 * atan2(sqrt(a), sqrt(1-a))
     km = 6367 * c
     mi = km * .6214
     return mi
+
 
 class FreshStart(webapp.RequestHandler):
     def get(self):
         taskqueue.add(url='/freshstartworker', params={})
         self.redirect("/")
+
 
 class FreshStartWorker(webapp.RequestHandler):
     def post(self):
@@ -474,71 +470,83 @@ class FreshStartWorker(webapp.RequestHandler):
           db.delete(q)
         ############################################################
 
+
 class IG_JustPhotos(webapp.RequestHandler):
   def post(self):
     key = self.request.get('key')
     currentUser = User.get_by_key_name(key)
-    fillErUpI(currentUser)
+    IG_LoadPhotos(currentUser)
     currentUser.put()
-    
-def fillErUpI(currentUser):
+
+
+def IG_LoadPhotos(currentUser):
   self_response_url = "https://api.instagram.com/v1/users/self/media/recent/?access_token=%s" % (currentUser.ig_token)
   self_response_json = urlfetch.fetch(self_response_url, validate_certificate=False)
   self_response = simplejson.loads(self_response_json.content)
   logging.info(self_response_url)
-  
+
   for photo in self_response['data']:
     if photo['location']:
       if 'latitude' in photo['location']:
-        photoID = photo['id']
-        newPhoto = Photo(key_name=photoID)
-        newPhoto.fs_id = photoID
-        newPhoto.photo_url = photo['images']['standard_resolution']['url']
-        newPhoto.width = photo['images']['standard_resolution']['width']
-        newPhoto.height = photo['images']['standard_resolution']['height']
-        newPhoto.fs_300 = photo['images']['low_resolution']['url']        
-        newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(float(photo['created_time']))
-        newPhoto.fs_lat = float(photo['location']['latitude'])
-        newPhoto.fs_lng = float(photo['location']['longitude'])
-        if 'name' in photo['location']:
-          newPhoto.fs_venue_name = photo['location']['name']
-        if photo['caption'] is not None:
-          newPhoto.fs_shout = photo['caption']['text']
-        newPhoto.link = photo['link']
+        newPhoto = IG_AddPhoto(photo)
         newPhoto.put()
-        currentUser.ig_photos.append(photoID)
-                
+        currentUser.ig_photos.append(newPhoto.key_id)
+
+
+def IG_AddPhoto(photo):
+  photoID = photo['id']
+  newPhoto = Photo(key_name=photoID)
+  newPhoto.key_id = photoID
+  newPhoto.photo_url = photo['images']['standard_resolution']['url']
+  newPhoto.width = photo['images']['standard_resolution']['width']
+  newPhoto.height = photo['images']['standard_resolution']['height']
+  newPhoto.fs_300 = photo['images']['low_resolution']['url']
+  newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(float(photo['created_time']))
+  newPhoto.fs_lat = float(photo['location']['latitude'])
+  newPhoto.fs_lng = float(photo['location']['longitude'])
+  if 'name' in photo['location']:
+    newPhoto.fs_venue_name = photo['location']['name']
+  if photo['caption'] is not None:
+    newPhoto.shout = photo['caption']['text']
+  newPhoto.link = photo['link']
+  return newPhoto
+
+
 class FS_JustPhotos(webapp.RequestHandler):
   def post(self):
     key = self.request.get('key')
     currentUser = User.get_by_key_name(key)
-    recursivePhotoPull(currentUser, 0)
+    FS_RecursivePhotoPull(currentUser, 0)
     currentUser.put()
     taskqueue.add(url='/getfriends', params={'key': currentUser.key().name()})
-        
-def recursivePhotoPull(currentUser, indx):
+
+
+def FS_RecursivePhotoPull(currentUser, indx):
   indxStart = indx
-  photos_url = "https://api.foursquare.com/v2/users/self/photos?offset=%s&limit=500&oauth_token=%s" % (indx, currentUser.token)
+  photos_url = "https://api.foursquare.com/v2/users/self/photos?offset=%s&limit=500&oauth_token=%s" % (indx, currentUser.fs_token)
   photos_json = urlfetch.fetch(photos_url, validate_certificate=False)
   photos_response = simplejson.loads(photos_json.content)
   count = photos_response['response']['photos']['count']
   # TODO if count == 0:
     # some sort of error handling
   logging.info('fetching ' + photos_url + " count is " + str(count))
-  for photo in photos_response['response']['photos']['items']:            
+  for photo in photos_response['response']['photos']['items']:
     if 'lat' in photo['venue']['location']:
-      addPhotoEndpoint(photo, currentUser)
+      newPhoto = FS_LoadPhoto(photo, currentUser)
+      newPhoto.put()
+      currentUser.fs_photos.append(newPhoto.key_id)
       indx += 1
       if indx == 20: # quick return to get something up on the screen
         currentUser.put()
   if indx < count and indxStart != indx:
-    recursivePhotoPull(currentUser, indx)
+    FS_RecursivePhotoPull(currentUser, indx)
+
 
 # variation of add photos for the /photos endpoint
-def addPhotoEndpoint(photo, currentUser):
+def FS_LoadPhoto(photo, currentUser):
   photoID = str(photo['id'])
   newPhoto = Photo(key_name=photoID)
-  newPhoto.fs_id = photoID
+  newPhoto.key_id = photoID
   newPhoto.fs_venue_name = photo['venue']['name']
   newPhoto.fs_venue_id = photo['venue']['id']
   if 'checkin' in photo:
@@ -550,7 +558,7 @@ def addPhotoEndpoint(photo, currentUser):
       userPath = currentUser.fs_id
     newPhoto.link = "https://foursquare.com/%s/checkin/%s" % (userPath, newPhoto.fs_checkin_id)
     if 'shout' in photo['checkin']:
-      newPhoto.fs_shout = photo['checkin']['shout']
+      newPhoto.shout = photo['checkin']['shout']
   if 'address' in photo['venue']['location']:
     newPhoto.fs_address = photo['venue']['location']['address']
   if 'crossStreet' in photo['venue']['location']:
@@ -565,6 +573,8 @@ def addPhotoEndpoint(photo, currentUser):
     if len(photo['venue']['categories']) > 0:
       newPhoto.cat_id = photo['venue']['categories'][0]['id']
       newPhoto.cat_name = photo['venue']['categories'][0]['name']
+  if photo['source']['name'] == 'Instagram':
+    newPhoto.ig_pushed_to_fs = True
   newPhoto.fs_lat = photo['venue']['location']['lat']
   newPhoto.fs_lng = photo['venue']['location']['lng']
   newPhoto.photo_url = photo['url']
@@ -572,38 +582,37 @@ def addPhotoEndpoint(photo, currentUser):
   newPhoto.height = photo['sizes']['items'][0]['height']
   newPhoto.fs_300 = photo['sizes']['items'][1]['url']
   newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(photo['createdAt'])
-  newPhoto.put()
-  
-  # add the photo to the user as well, just in case
-  currentUser.fs_photos.append(photoID)
+  return newPhoto
+
 
 class Preview(webapp.RequestHandler):
   def get(self):
     cookieValue = None
     try:
-        cookieValue = self.request.cookies['corpoCookie']
+      cookieValue = self.request.cookies['corpoCookie']
     except KeyError:
-        logging.info('no cookie')
+      logging.info('no cookie')
     if cookieValue:
-        currentUser = User.get_by_key_name(cookieValue)
-        startAt = int(self.request.get("startAt"))
-        endAt = startAt + 51
-        if currentUser.all_photos:
-          allLen = len(currentUser.all_photos)
-          listOfPhotos = []
-          moreLeft = False
-          if endAt < allLen:
-            moreLeft = True
-          else: 
-            endAt = allLen
-          logging.info("startat is " + str(startAt) + " end is " + str(endAt))
-          for photoKey in currentUser.all_photos[startAt : endAt]:
-              listOfPhotos.append(Photo.get_by_key_name(photoKey))
-          path = os.path.join(os.path.dirname(__file__), 'templates/preview.html')
-          self.response.out.write(template.render(path, {'photos' : listOfPhotos[:-1], 'more': moreLeft, 'startNext': endAt - 1}))
+      currentUser = User.get_by_key_name(cookieValue)
+      startAt = int(self.request.get("startAt"))
+      endAt = startAt + 51
+      if currentUser.all_photos:
+        allLen = len(currentUser.all_photos)
+        listOfPhotos = []
+        moreLeft = False
+        if endAt < allLen:
+          moreLeft = True
         else:
-          path = os.path.join(os.path.dirname(__file__), 'templates/preview.html')
-          self.response.out.write(template.render(path, {'loading': True }))
+          endAt = allLen
+        logging.info("startat is " + str(startAt) + " end is " + str(endAt))
+        for photoKey in currentUser.all_photos[startAt : endAt]:
+          listOfPhotos.append(Photo.get_by_key_name(photoKey))
+        path = os.path.join(os.path.dirname(__file__), 'templates/preview.html')
+        self.response.out.write(template.render(path, {'photos' : listOfPhotos, 'more': moreLeft, 'startNext': endAt - 1}))
+      else:
+        path = os.path.join(os.path.dirname(__file__), 'templates/preview.html')
+        self.response.out.write(template.render(path, {'loading': True }))
+
 
 class GetFriends(webapp.RequestHandler):
   def post(self):
@@ -611,20 +620,22 @@ class GetFriends(webapp.RequestHandler):
     currentUser = User.get_by_key_name(key)
     recursiveFriendPull(currentUser, 0)
     currentUser.put()
-    
+
+
 def recursiveFriendPull(currentUser, indx):
   indxStart = indx
-  friends_url = "https://api.foursquare.com/v2/users/self/friends?offset=%s&limit=500&oauth_token=%s" % (indx, currentUser.token)
+  friends_url = "https://api.foursquare.com/v2/users/self/friends?offset=%s&limit=500&oauth_token=%s" % (indx, currentUser.fs_token)
   friends_json = urlfetch.fetch(friends_url, validate_certificate=False)
   friends_response = simplejson.loads(friends_json.content)
   count = friends_response['response']['friends']['count']
   logging.info('fetching ' + friends_url + " count is " + str(count))
   for friend in friends_response['response']['friends']['items']:
     if friend['relationship'] == 'friend':
-      currentUser.fs_friends.append(friend['id'])      
+      currentUser.fs_friends.append(friend['id'])
     indx += 1
   if indx < count and indxStart != indx:
     recursiveFriendPull(currentUser, indx)
+
 
 # probably make this a taskque
 class MergeIgFs(webapp.RequestHandler):
@@ -638,35 +649,19 @@ class MergeIgFs(webapp.RequestHandler):
       currentUser = User.get_by_key_name(cookieValue)
       currentUser.all_photos = []
       logging.info('hey up here!')
-      
-      if len(currentUser.fs_photos) > 0 and len(currentUser.ig_photos) > 0:
-        logging.info('hey in here')
-        instaIndx = 0
-        ig_photo = Photo.get_by_key_name(currentUser.ig_photos[0])
-        for photoKey in currentUser.fs_photos:
-          logging.info(instaIndx)
-          fs_photo = Photo.get_by_key_name(photoKey)
-          if fs_photo.fs_createdAt > ig_photo.fs_createdAt:
-            currentUser.all_photos.append(photoKey)
-          else:
-            if (instaIndx + 1) < len(currentUser.ig_photos):
-              currentUser.all_photos.append(currentUser.ig_photos[instaIndx])
-              instaIndx += 1
-              ig_photo = Photo.get_by_key_name(currentUser.ig_photos[instaIndx])
-            elif (instaIndx + 1) == len(currentUser.ig_photos):
-              currentUser.all_photos.append(currentUser.ig_photos[instaIndx])
-              instaIndx += 1
-            else:
-              currentUser.all_photos.append(photoKey)
-        while instaIndx < len(currentUser.ig_photos):
-          currentUser.all_photos.append(currentUser.ig_photos[instaIndx])
-          instaIndx += 1
-      elif len(currentUser.fs_photos) > 0 and len(currentUser.ig_photos) == 0:
-        currentUser.all_photos = currentUser.fs_photos
-      elif len(currentUser.fs_photos) == 0 and len(currentUser.ig_photos) > 0:
-        currentUser.all_photos = currentUser.ig_photos
+
+      allPhotosKeys = currentUser.fs_photos + currentUser.ig_photos
+      allPhotos = []
+      for key in allPhotosKeys:
+        allPhotos.append(Photo.get_by_key_name(key))
+      allPhotos = sorted(allPhotos, key=attrgetter('fs_createdAt'), reverse=True)
+      orderedKeys = []
+      for photo in allPhotos:
+        orderedKeys.append(photo.key_id)
+      currentUser.all_photos = orderedKeys
       currentUser.put()
-    self.redirect("/")      
+    self.redirect("/")
+
 
 class HidePhoto(webapp.RequestHandler):
   def get(self):
@@ -685,10 +680,10 @@ class HidePhoto(webapp.RequestHandler):
 
     # remove it from the trip... probably also need a check to only render trips with at least 1 photo
     # rename the trip... there should be a way to look up which trip each photo belongs to
-    # 
+    #
     # or maybe do it with a hidden count on the trip, if it's < then show the trip? prob. not if we care about naming
     # in the javascript ajax remove the photo and the preview
-    
+
 application = webapp.WSGIApplication([('/', Index,),
                                       ('/fs_auth', FS_OAuthRequest),
                                       ('/ig_auth', IG_OAuthRequest),
