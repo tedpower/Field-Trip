@@ -21,8 +21,9 @@ class User(db.Model):
     trips = db.StringListProperty()
     twitter = db.StringProperty()
     last_updated = db.DateTimeProperty(auto_now_add=True)
-    updated = db.BooleanProperty(default=False)
+    complete_stage = db.IntegerProperty()
     fs_friends = db.StringListProperty()
+    ongoingTrip = db.StringProperty()
 
     @property
     def get_all_photos(self):
@@ -84,6 +85,7 @@ class IG_Photo(db.Model):
 
 class Trip(db.Model):
     # key is the checkin id of the first checkin
+    key_id = db.StringProperty()
     photos = db.StringListProperty()
     title = db.StringProperty()
     start_date = db.DateTimeProperty()

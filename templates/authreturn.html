@@ -1,7 +1,7 @@
 {% extends "_base.html" %}
 {% block bodycontent %}
 
-{% if user.updated %}
+{% if user.complete_stage == 3 %}
     <div id="photos" class="clearfix">
         {% for trip in user.get_all_trips %}
                 {% if trip.home and trip.photos %}
@@ -69,49 +69,6 @@
 
     <div id="end"></div>
 
-{% else %}
-    <div id="photos" class="clearfix"></div>
-
-    <script>
-    function updatePhotos() {
-      $.ajax({
-        url: "/preview?startAt=0",
-        cache: false,
-        success: function(html){
-          $("#photos").append(html);
-        }
-       });
-       // $.ajax({
-       //   url: "/updateAll",
-       //   cache: false,
-       //   success: function(html){
-       //     $("#photos").prepend(html);
-       //   }
-       //  });
-     }
-    updatePhotos();
-    </script>
 {% endif %}
-
-<!-- <script>
-{% if user.updated %}
-    var test = true;
-{% else %}
-    var test = false;
-{% endif %}
-
-function updatePage() {
-    location.reload(true);
-}
-if (test == false) {
-    setTimeout('updatePage()', 4000);
-}
-</script> -->
-
-
-<div style="padding: 30px"><a href="/ig_auth">Sign in with instagram</a>
-| <a href="/fs_auth">Sign in with foursquare</a>
-| <a href="/merge">merge instagram and 4sq</a>
-| <a href="/findTrips">Find Trips</a></div>
 
 {% endblock %}

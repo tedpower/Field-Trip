@@ -274,22 +274,22 @@ body.loggedin {
 /* Logged Out Homepage ---------- */
 
 @-webkit-keyframes photo {
-  from { 
+  from {
   -webkit-transform:translate(10px, -4000px) scale(0.1) rotate(-160deg);
-  opacity:0.0; 
+  opacity:0.0;
 }
-  to { 
+  to {
   -webkit-transform:translate(0, 0);
-  scale(1.0) rotate(0); 
+  scale(1.0) rotate(0);
   opacity:1.0;
   }
 }
 
 @-webkit-keyframes text {
-  from { 
-  opacity:0.0; 
+  from {
+  opacity:0.0;
 }
-  to { 
+  to {
   opacity:1.0;
   }
 }
@@ -379,6 +379,41 @@ a.inactive {
 	background: url(description.png) no-repeat;
 }
 
+/* Onboarding --------- */
+
+#onboarding #photos {
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.prev {
+  margin: 0;
+  width: 160px;
+  height: 160px;
+  float: left;
+}
+
+#photoContainer {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    overflow: hidden;
+}
+
+#modal {
+    position: fixed;
+    top: 160px;
+    left: 50%;
+    margin-left: -300px;
+    width: 600px;
+    height: 300px;
+    background-color: #fff;
+    -webkit-box-shadow: 0 0 1px rgba(0, 0, 0, .6), 0 1px 5px 3px rgba(0, 0, 0, .05), 0 5px 4px -3px rgba(0, 0, 0, .06);
+}
 
 /* Hacks ---------- */
 

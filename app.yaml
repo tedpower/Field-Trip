@@ -1,13 +1,18 @@
 application: fieldtripapp
 version: 1
-runtime: python
+runtime: python27
 api_version: 1
+threadsafe: true
 
 handlers:
 - url: /static
   static_dir: static
 - url: /updateAllPhotos
-  script: updateAllPhotos.py
+  script: updateAllPhotos
   login: admin
 - url: /.*
-  script: main.py
+  script: main.app
+
+libraries:
+- name: django
+  version: latest

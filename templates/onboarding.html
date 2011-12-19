@@ -3,8 +3,8 @@
 
 <html lang="en">
 <head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<title>Field Trip</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Field Trip</title>
     <LINK REL=StyleSheet href="/static/style.css" TYPE="text/css" MEDIA=screen>
     <link rel="icon" type="image/png" href="static/temp.png">
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
@@ -13,7 +13,6 @@
     <script type="text/javascript" src="/static/main.js"></script>
 
     <script type="text/javascript">
-
       var _gaq = _gaq || [];
       _gaq.push(['_setAccount', 'UA-26842779-1']);
       _gaq.push(['_trackPageview']);
@@ -23,40 +22,41 @@
         ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
         var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
       })();
-
     </script>
-
 </head>
-<body class="loggedin">
+<body id="onboarding">
 
-    <div id="header">
-        <div id="headwrap">
+<div id="photoContainer">
+  <div id="photos">
+    <script>
+      function updatePhotos() {
+        var browserWidth = $(window).width();
+        var browserHeight = $(window).height();
+        var thumbSide = 160;
+        var rows = Math.ceil(browserWidth / thumbSide);
+        var cols = Math.ceil(browserHeight / thumbSide);
+        $('#photos').width(String(rows * thumbSide) + "px");
+        $('#photos').height(String(cols * thumbSide) + "px");
+        var pull =  rows * cols;
+        $.ajax({
+          url: "/preview?startAt=0&mode={{ user.complete_stage }}&pull=" + pull,
+          cache: false,
+          success: function(html){
+            $('#photos').html(html);
+          }
+        });
+      }
+      updatePhotos();
+    </script>
+  </div>
+  <div id="modal"><a href="/ig_auth">Sign in with instagram</a>
+| <a href="/fs_auth">Sign in with foursquare</a>
+| <a href="/merge">merge instagram and 4sq</a>
+| <a href="/findTrips">Find Trips</a>
+| <a href="#" id="logout">Log out</a></div>
 
-            <a href="/"><img src="static/logo.png" width="160" height="22" alt="Field Trip" id="logo"></a>
-            <div id="menu">
-                <div class="profilename">{% if user.fs_firstName %}{{ user.fs_firstName }}{% endif %}</div>
-                {% if user.fs_profilePic %}
-                     <img src="{{ user.fs_profilePic }}" width="30px" height="30px" id="headerprofilepic">
-                {% endif %}
-            </div>
-            <div id="toggle" class="clearfix">
-                <div id="you"><a href="#">You</a></div>
-                <div id="friends"><a href="/friends" class="inactive">Friends</a></div>
-            </div>
+</div>
 
-            <ul id="menubox">
-                <li><a href="/settings">Settings</a></li>
-                <li><a href="#">About</a></li>
-                <li><a href="#" id="logout">Log out</a></li>
-            </ul>
-        </div>
-    </div>
-
-
-
-{% block bodycontent %}
-     Replace this
-{% endblock %}
 
 </body>
 </html>
