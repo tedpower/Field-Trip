@@ -15,6 +15,7 @@ import datetime
 import time
 import calendar
 import urllib
+import urlparse
 import security
 from auth import *
 from models import *
@@ -66,8 +67,43 @@ class FS_OAuthRequest(webapp2.RequestHandler):
 
 
 class IG_OAuthRequest(webapp2.RequestHandler):
-    def get(self):
-        self.redirect("https://api.instagram.com/oauth/authorize/?client_id=%s&redirect_uri=%s&response_type=code" % (instagram_creds['key'], instagram_creds['return_url']))
+  def get(self):
+    self.redirect("https://api.instagram.com/oauth/authorize/?client_id=%s&redirect_uri=%s&response_type=code" % (instagram_creds['key'], instagram_creds['return_url']))
+
+
+class FB_OAuthRequest(webapp2.RequestHandler):
+  def get(self):
+    self.redirect("https://www.facebook.com/dialog/oauth?client_id=%s&redirect_uri=%s" % (facebook_creds['key'], facebook_creds['return_url']))
+
+
+class FB_OAuthRequestValid(webapp2.RequestHandler):
+  def get(self):
+    code = self.request.get('code')
+    logging.info(code)
+    url = "https://graph.facebook.com/oauth/access_token?client_id=%s&redirect_uri=%s&client_secret=%s&code=%s" % (facebook_creds['key'], facebook_creds['return_url'], facebook_creds['secret'], code)
+    logging.info(url)
+    url_response = urlfetch.fetch(url)
+    access_token = urlparse.parse_qs(str(url_response.content))['access_token'][0]
+    logging.info(access_token)
+
+    query = db.Query(User)
+    query.filter('fb_token =', access_token)
+    results = query.fetch(limit=1)
+    if len(results) > 0:
+      logging.info('user exists')
+      currentUser = results[0]
+    else:
+      cookieValue = None
+      try:
+        cookieValue = self.request.cookies['corpoCookie']
+      except KeyError:
+        logging.info('no cookie')
+      if cookieValue:
+        currentUser = User.get_by_key_name(cookieValue)
+        currentUser.fb_token = access_token
+        currentUser.put()
+
+    self.redirect("/")
 
 
 class IG_OAuthRequestValid(webapp2.RequestHandler):
@@ -115,9 +151,6 @@ class FS_OAuthRequestValid(webapp2.RequestHandler):
     logging.info(url)
     auth_json = urlfetch.fetch(url, method=urlfetch.GET, deadline=10)
     access_token = simplejson.loads(auth_json.content)
-
-    # we now have a valid token
-    # this token needs to be included with every API request
 
     query = db.Query(User)
     query.filter('fs_token =', access_token['access_token'])
@@ -757,25 +790,36 @@ class Friends(webapp2.RequestHandler):
       b_multiset = collections.Counter(currentUser.fs_friends)
 
       overlap = list((a_multiset & b_multiset).elements())
-
       logging.info(overlap)
 
+      friends = []
+      for friendKey in overlap:
+        query = db.Query(User)
+        query.filter('fs_id =', friendKey)
+        results = query.fetch(limit=1)
+      if len(results) > 0:
+        friend = results[0]
+        friends.append(friend)
 
+      path = os.path.join(os.path.dirname(__file__), 'templates/friends.html')
+      self.response.out.write(template.render(path, {'friends' : friends}))
 
 app = webapp2.WSGIApplication([('/', Index,),
-                                      ('/fs_auth', FS_OAuthRequest),
-                                      ('/ig_auth', IG_OAuthRequest),
-                                      ('/fs_authreturn', FS_OAuthRequestValid),
-                                      ('/ig_authreturn', IG_OAuthRequestValid),
-                                      ('/fs_justphotos', FS_JustPhotos),
-                                      ('/ig_justphotos', IG_JustPhotos),
-                                      ('/settings', Settings),
-                                      ('/freshstart', FreshStart),
-                                      ('/freshstartworker', FreshStartWorker),
-                                      ('/preview', Preview),
-                                      ('/getFriends', GetFriends),
-                                      ('/findTrips', FindTrips),
-                                      ('/hidePhoto', HidePhoto),
-                                      ('/friends', Friends),
-                                      ('/merge', MergeIgFs)],
-                                     debug=True)
+                               ('/fs_auth', FS_OAuthRequest),
+                               ('/ig_auth', IG_OAuthRequest),
+                               ('/fb_auth', FB_OAuthRequest),
+                               ('/fs_authreturn', FS_OAuthRequestValid),
+                               ('/ig_authreturn', IG_OAuthRequestValid),
+                               ('/fb_authreturn', FB_OAuthRequestValid),
+                               ('/fs_justphotos', FS_JustPhotos),
+                               ('/ig_justphotos', IG_JustPhotos),
+                               ('/settings', Settings),
+                               ('/freshstart', FreshStart),
+                               ('/freshstartworker', FreshStartWorker),
+                               ('/preview', Preview),
+                               ('/getFriends', GetFriends),
+                               ('/findTrips', FindTrips),
+                               ('/hidePhoto', HidePhoto),
+                               ('/friends', Friends),
+                               ('/merge', MergeIgFs)],
+                              debug=True)

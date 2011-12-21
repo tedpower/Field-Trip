@@ -4,8 +4,10 @@ import datetime
 class User(db.Model):
     fs_token = db.StringProperty()
     ig_token = db.StringProperty()
+    fb_token = db.StringProperty()
     fs_id = db.StringProperty()
     ig_id = db.StringProperty()
+    fb_id = db.StringProperty()
     fs_firstName = db.StringProperty()
     fs_lastName = db.StringProperty()
     fs_email = db.EmailProperty()
@@ -52,6 +54,15 @@ class User(db.Model):
         for tripKey in self.trips:
             listOfTrips.append(Trip.get_by_key_name(tripKey))
         return listOfTrips
+
+    @property
+    def get_ongoing_chunk(self):
+        photos = []
+        for photoKey in Trip.get_by_key_name(self.ongoingTrip).photos:
+            photos.append(Photo.get_by_key_name(photoKey))
+            if len(photos) > 17:
+                break
+        return photos
 
 class Photo(db.Model):
     # key is photo id

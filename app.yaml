@@ -8,7 +8,7 @@ handlers:
 - url: /static
   static_dir: static
 - url: /updateAllPhotos
-  script: updateAllPhotos
+  script: updateAllPhotos.app
   login: admin
 - url: /.*
   script: main.app

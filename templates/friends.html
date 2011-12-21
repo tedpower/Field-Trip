@@ -1,0 +1,6 @@
+{% for friend in friends %}
+  <p>{{ friend.fs_firstName }}</p>
+  {% for photo in friend.get_ongoing_chunk %}
+    <img src="{{ photo.fs_300 }}">
+  {% endfor %}
+{% endfor %}
