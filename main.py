@@ -73,7 +73,7 @@ class IG_OAuthRequest(webapp2.RequestHandler):
 
 class FB_OAuthRequest(webapp2.RequestHandler):
   def get(self):
-    self.redirect("https://www.facebook.com/dialog/oauth?client_id=%s&redirect_uri=%s" % (facebook_creds['key'], facebook_creds['return_url']))
+    self.redirect("https://www.facebook.com/dialog/oauth?client_id=%s&redirect_uri=%s&scope=offline_access" % (facebook_creds['key'], facebook_creds['return_url']))
 
 
 class FB_OAuthRequestValid(webapp2.RequestHandler):
