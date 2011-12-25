@@ -64,6 +64,14 @@ a:hover {
 	background: url(dot.png) no-repeat 50% 50%;
 }
 
+#toggle a {
+  color: #999999;
+}
+
+#toggle a.selected {
+  color: #333333;
+}
+
 #menu {
 	float: right;
 	margin-right: 4px;
@@ -355,10 +363,6 @@ body.loggedin {
 	color: #666;
 }
 
-a.inactive {
-	color: #999999;
-}
-
 .loggedOut h1 {
 	width: 506px;
 	float: left;
@@ -414,6 +418,22 @@ a.inactive {
     background-color: #fff;
     -webkit-box-shadow: 0 0 1px rgba(0, 0, 0, .6), 0 1px 5px 3px rgba(0, 0, 0, .05), 0 5px 4px -3px rgba(0, 0, 0, .06);
 }
+
+/* Friends ---------- */
+
+.friendTrip img:first-child {
+    width: 160px;
+    height: 160px;
+}
+
+.friendTrip img {
+    width: 78px;
+    height: 78px;
+    vertical-align: top;
+    float: left;
+    padding: 0 4px 4px 0;
+}
+
 
 /* Hacks ---------- */
 

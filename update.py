@@ -12,10 +12,9 @@ from models import *
 class UpdateAllPhotos(webapp2.RequestHandler):
   def get(self):
     userList = User.all()
-    photoDiff = []
 
     for user in userList:
-
+      photoDiff = []
       lastUpdated = str(int(time.mktime(user.last_updated.timetuple())))
 
       # update instagram
@@ -104,5 +103,45 @@ class UpdateAllPhotos(webapp2.RequestHandler):
 
       # check friends
 
+class UpdateAllFriends(webapp2.RequestHandler):
+  def get(self):
+    userList = User.all()
+    photoDiff = []
 
-app = webapp2.WSGIApplication([('/updateAllPhotos', UpdateAllPhotos)], debug=True)
+    # 1. make a list of all fb ids and fs ids in the system
+    allUsers = User.all()
+    allUserKeys = []
+    for user in allUsers:
+      if user.fs_id is not None:
+        allUserKeys.append(user.fs_id)
+    logging.info(allUserKeys)
+
+    for user in userList:
+
+      a_multiset = collections.Counter(allUserKeys)
+      b_multiset = collections.Counter(currentUser.fs_friends)
+
+      overlap = list((a_multiset & b_multiset).elements())
+      logging.info(overlap)
+
+      friends = []
+      for friendKey in overlap:
+        query = db.Query(User)
+        query.filter('fs_id =', friendKey)
+        results = query.fetch(limit=1)
+      if len(results) > 0:
+        friend = results[0]
+        friends.append(friend)
+
+      # next update facebook friends
+      # don't store 4sq friends, store friends on here
+
+      path = os.path.join(os.path.dirname(__file__), 'templates/friends.html')
+      self.response.out.write(template.render(path, {'friends' : friends}))
+
+
+app = webapp2.WSGIApplication([('/update/photos', UpdateAllPhotos),
+                               ('/update/friends', UpdateAllFriends)], debug=True)
+
+
+

@@ -60,7 +60,7 @@ class User(db.Model):
         photos = []
         for photoKey in Trip.get_by_key_name(self.ongoingTrip).photos:
             photos.append(Photo.get_by_key_name(photoKey))
-            if len(photos) > 17:
+            if len(photos) > 16:
                 break
         return photos
 
@@ -102,7 +102,7 @@ class Trip(db.Model):
     start_date = db.DateTimeProperty()
     end_date = db.DateTimeProperty()
     ongoing = db.BooleanProperty(default=False)
-    home = db.BooleanProperty(default=True)
+    home = db.BooleanProperty()
 
     @property
     def get_all_photos(self):

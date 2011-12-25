@@ -21,11 +21,10 @@ from auth import *
 from models import *
 
 class Index(webapp2.RequestHandler):
-
   def get(self):
     cookieValue = None
     try:
-      cookieValue = self.request.cookies['corpoCookie']
+      cookieValue = self.request.cookies['FT_Cookie']
     except KeyError:
       logging.info('no cookie')
     if cookieValue is not None:
@@ -35,8 +34,10 @@ class Index(webapp2.RequestHandler):
         path = os.path.join(os.path.dirname(__file__), 'templates/onboarding.html')
         self.response.out.write(template.render(path, {'user' : cookieUser}))
       else:
+        requestPath = self.request.path
+        logging.info(requestPath)
         path = os.path.join(os.path.dirname(__file__), 'templates/authreturn.html')
-        self.response.out.write(template.render(path, {'user' : cookieUser}))
+        self.response.out.write(template.render(path, {'user' : cookieUser, 'path' : requestPath}))
     else:
       path = os.path.join(os.path.dirname(__file__), 'templates/index.html')
       self.response.out.write(template.render(path, {}))
@@ -50,7 +51,7 @@ class Settings(webapp2.RequestHandler):
   def get(self):
     cookieValue = None
     try:
-      cookieValue = self.request.cookies['corpoCookie']
+      cookieValue = self.request.cookies['FT_Cookie']
     except KeyError:
       logging.info('no cookie')
     if cookieValue:
@@ -76,74 +77,6 @@ class FB_OAuthRequest(webapp2.RequestHandler):
     self.redirect("https://www.facebook.com/dialog/oauth?client_id=%s&redirect_uri=%s&scope=offline_access" % (facebook_creds['key'], facebook_creds['return_url']))
 
 
-class FB_OAuthRequestValid(webapp2.RequestHandler):
-  def get(self):
-    code = self.request.get('code')
-    logging.info(code)
-    url = "https://graph.facebook.com/oauth/access_token?client_id=%s&redirect_uri=%s&client_secret=%s&code=%s" % (facebook_creds['key'], facebook_creds['return_url'], facebook_creds['secret'], code)
-    logging.info(url)
-    url_response = urlfetch.fetch(url)
-    access_token = urlparse.parse_qs(str(url_response.content))['access_token'][0]
-    logging.info(access_token)
-
-    query = db.Query(User)
-    query.filter('fb_token =', access_token)
-    results = query.fetch(limit=1)
-    if len(results) > 0:
-      logging.info('user exists')
-      currentUser = results[0]
-    else:
-      cookieValue = None
-      try:
-        cookieValue = self.request.cookies['corpoCookie']
-      except KeyError:
-        logging.info('no cookie')
-      if cookieValue:
-        currentUser = User.get_by_key_name(cookieValue)
-        currentUser.fb_token = access_token
-        currentUser.put()
-
-    self.redirect("/")
-
-
-class IG_OAuthRequestValid(webapp2.RequestHandler):
-  def get(self):
-    code = self.request.get('code')
-    data = urllib.urlencode({"client_id":instagram_creds['key'],"client_secret":instagram_creds['secret'],"grant_type":"authorization_code","redirect_uri":instagram_creds['return_url'],"code":code})
-    result = urllib.urlopen("https://api.instagram.com/oauth/access_token",data).read()
-    logging.info(result)
-    access_token = simplejson.loads(result)
-
-    query = db.Query(User)
-    query.filter('ig_token =', access_token['access_token'])
-    results = query.fetch(limit=1)
-    if len(results) > 0:
-        logging.info('user exists')
-        currentUser = results[0]
-    else:
-      cookieValue = None
-      try:
-        cookieValue = self.request.cookies['corpoCookie']
-      except KeyError:
-        logging.info('no cookie')
-      if cookieValue:
-        currentUser = User.get_by_key_name(cookieValue)
-      else:
-        u = uuid.uuid4()
-        currentUser = User(key_name=str(u))
-        # set the cookie! TODO: make this something like today + 2 weeks?
-        cookieString = str('corpoCookie=%s; expires=Fri, 31-Dec-2020 23:59:59 GMT' % currentUser.key().name())
-        self.response.headers.add_header('Set-Cookie', cookieString)
-
-      currentUser.ig_token = access_token['access_token']
-      currentUser.ig_id = str(access_token['user']['id'])
-      currentUser.put()
-
-      taskqueue.add(url='/ig_justphotos', params={'key': currentUser.key().name()})
-
-    self.redirect("/")
-
-
 class FS_OAuthRequestValid(webapp2.RequestHandler):
   def get(self):
     code = self.request.get('code')
@@ -165,7 +98,7 @@ class FS_OAuthRequestValid(webapp2.RequestHandler):
 
       cookieValue = None
       try:
-        cookieValue = self.request.cookies['corpoCookie']
+        cookieValue = self.request.cookies['FT_Cookie']
       except KeyError:
         logging.info('no cookie')
       if cookieValue:
@@ -175,7 +108,7 @@ class FS_OAuthRequestValid(webapp2.RequestHandler):
         currentUser = User(key_name=str(u))
 
         # set the cookie! TODO: make this something like today + 2 weeks?
-        cookieString = str('corpoCookie=%s; expires=Fri, 31-Dec-2020 23:59:59 GMT' % currentUser.key().name())
+        cookieString = str('FT_Cookie=%s; expires=Fri, 31-Dec-2020 23:59:59 GMT' % currentUser.key().name())
         self.response.headers.add_header('Set-Cookie', cookieString)
 
       currentUser.fs_token = access_token['access_token']
@@ -201,11 +134,104 @@ class FS_OAuthRequestValid(webapp2.RequestHandler):
     self.redirect("/")
 
 
+class IG_OAuthRequestValid(webapp2.RequestHandler):
+  def get(self):
+    code = self.request.get('code')
+    data = urllib.urlencode({"client_id":instagram_creds['key'],"client_secret":instagram_creds['secret'],"grant_type":"authorization_code","redirect_uri":instagram_creds['return_url'],"code":code})
+    result = urllib.urlopen("https://api.instagram.com/oauth/access_token",data).read()
+    logging.info(result)
+    access_token = simplejson.loads(result)
+
+    query = db.Query(User)
+    query.filter('ig_token =', access_token['access_token'])
+    results = query.fetch(limit=1)
+    if len(results) > 0:
+        logging.info('user exists')
+        currentUser = results[0]
+    else:
+      cookieValue = None
+      try:
+        cookieValue = self.request.cookies['FT_Cookie']
+      except KeyError:
+        logging.info('no cookie')
+      if cookieValue:
+        currentUser = User.get_by_key_name(cookieValue)
+      else:
+        u = uuid.uuid4()
+        currentUser = User(key_name=str(u))
+        # set the cookie! TODO: make this something like today + 2 weeks?
+        cookieString = str('FT_Cookie=%s; expires=Fri, 31-Dec-2020 23:59:59 GMT' % currentUser.key().name())
+        self.response.headers.add_header('Set-Cookie', cookieString)
+
+      currentUser.ig_token = access_token['access_token']
+      currentUser.ig_id = str(access_token['user']['id'])
+      currentUser.put()
+
+      taskqueue.add(url='/ig_justphotos', params={'key': currentUser.key().name()})
+
+    self.redirect("/")
+
+
+class FB_OAuthRequestValid(webapp2.RequestHandler):
+  def get(self):
+    code = self.request.get('code')
+    logging.info(code)
+    url = "https://graph.facebook.com/oauth/access_token?client_id=%s&redirect_uri=%s&client_secret=%s&code=%s" % (facebook_creds['key'], facebook_creds['return_url'], facebook_creds['secret'], code)
+    logging.info(url)
+    url_response = urlfetch.fetch(url)
+    access_token = urlparse.parse_qs(str(url_response.content))['access_token'][0]
+    logging.info(access_token)
+
+    query = db.Query(User)
+    query.filter('fb_token =', access_token)
+    results = query.fetch(limit=1)
+    if len(results) > 0:
+      logging.info('user exists')
+      currentUser = results[0]
+    else:
+      cookieValue = None
+      try:
+        cookieValue = self.request.cookies['FT_Cookie']
+      except KeyError:
+        logging.info('no cookie')
+      if cookieValue:
+        currentUser = User.get_by_key_name(cookieValue)
+        currentUser.fb_token = access_token
+        currentUser.put()
+
+    self.redirect("/")
+
+
+# probably make this a taskque
+class MergeIgFs(webapp2.RequestHandler):
+  def get(self):
+    cookieValue = None
+    try:
+      cookieValue = self.request.cookies['FT_Cookie']
+    except KeyError:
+      logging.info('no cookie')
+    if cookieValue:
+      currentUser = User.get_by_key_name(cookieValue)
+      currentUser.all_photos = []
+
+      allPhotosKeys = currentUser.fs_photos + currentUser.ig_photos
+      allPhotos = []
+      for key in allPhotosKeys:
+        allPhotos.append(Photo.get_by_key_name(key))
+      allPhotos = sorted(allPhotos, key=attrgetter('fs_createdAt'), reverse=True)
+      orderedKeys = []
+      for photo in allPhotos:
+        orderedKeys.append(photo.key_id)
+      currentUser.all_photos = orderedKeys
+      currentUser.put()
+    self.redirect("/")
+
+
 class FindTrips(webapp2.RequestHandler):
   def get(self):
     cookieValue = None
     try:
-      cookieValue = self.request.cookies['corpoCookie']
+      cookieValue = self.request.cookies['FT_Cookie']
     except KeyError:
       logging.info('no cookie')
     if cookieValue:
@@ -283,19 +309,25 @@ def findTripRanges(currentUser, photos, datePts):
   currentTrip.key_id = tripKey
   currentTrip.ongoing = True
   currentUser.ongoingTrip = currentTrip.key_id
+
+  cLat = datePts[0][1].lat
+  cLng = datePts[0][1].lon
+  checkinDstnc = haversine(cLat, cLng, currentUser.homeCityLat, currentUser.homeCityLng)
+  if checkinDstnc > currentUser.radius:
+    currentTrip.home = False
+  else:
+    currentTrip.home = True
   prevCheckinDate = datePts[0][0]
   newTrips = []
 
-  for i in range(len(datePts)):
+  for i in range(1, len(datePts)):
     cLat = datePts[i][1].lat
     cLng = datePts[i][1].lon
     checkinDstnc = haversine(cLat, cLng, currentUser.homeCityLat, currentUser.homeCityLng)
-
     if checkinDstnc > currentUser.radius and currentTrip.home == True:
       # hey we're starting a new trip! First wrap up the old one
       currentTrip.start_date = prevCheckinDate
       currentTrip.put()
-      logging.info('adding a trip')
       newTrips.append(currentTrip.key().name())
       currentTime = datePts[i][0]
       tripKey = "f" + currentUser.fs_id + "d" + str(int(time.mktime(currentTime.timetuple())))
@@ -307,7 +339,6 @@ def findTripRanges(currentUser, photos, datePts):
       # end trip
       currentTrip.start_date = prevCheckinDate
       currentTrip.put()
-      logging.info('adding another trip')
       newTrips.append(currentTrip.key().name())
       # Start a new trip at home
       currentTime = datePts[i][0]
@@ -315,6 +346,7 @@ def findTripRanges(currentUser, photos, datePts):
       currentTrip = Trip(key_name=tripKey)
       currentTrip.key_id = tripKey
       currentTrip.end_date = datePts[i][0]
+      currentTrip.home = True
     prevCheckinDate = datePts[i][0]
 
   # add the first trip
@@ -323,6 +355,8 @@ def findTripRanges(currentUser, photos, datePts):
   currentTrip.put()
 
   logging.info(len(newTrips))
+  logging.info(newTrips)
+
 
   # now add the photos to the trips
   tripIndx = 0
@@ -344,9 +378,13 @@ def findTripRanges(currentUser, photos, datePts):
 
   tripList = []
 
+  logging.info('hi')
+  logging.info(len(newTrips))
+
   # now loop through and delete trips without photos
   for trip in newTrips:
     thisTrip = Trip.get_by_key_name(trip)
+    logging.info(thisTrip.start_date)
     if not thisTrip.photos and not thisTrip.ongoing:
       thisTrip.delete()
     else:
@@ -650,7 +688,7 @@ class Preview(webapp2.RequestHandler):
 
     cookieValue = None
     try:
-      cookieValue = self.request.cookies['corpoCookie']
+      cookieValue = self.request.cookies['FT_Cookie']
     except KeyError:
       logging.info('no cookie')
     if cookieValue:
@@ -722,37 +760,12 @@ def recursiveFriendPull(currentUser, indx):
     recursiveFriendPull(currentUser, indx)
 
 
-# probably make this a taskque
-class MergeIgFs(webapp2.RequestHandler):
-  def get(self):
-    cookieValue = None
-    try:
-      cookieValue = self.request.cookies['corpoCookie']
-    except KeyError:
-      logging.info('no cookie')
-    if cookieValue:
-      currentUser = User.get_by_key_name(cookieValue)
-      currentUser.all_photos = []
-
-      allPhotosKeys = currentUser.fs_photos + currentUser.ig_photos
-      allPhotos = []
-      for key in allPhotosKeys:
-        allPhotos.append(Photo.get_by_key_name(key))
-      allPhotos = sorted(allPhotos, key=attrgetter('fs_createdAt'), reverse=True)
-      orderedKeys = []
-      for photo in allPhotos:
-        orderedKeys.append(photo.key_id)
-      currentUser.all_photos = orderedKeys
-      currentUser.put()
-    self.redirect("/")
-
-
 class HidePhoto(webapp2.RequestHandler):
   def get(self):
     photoID = self.request.get('id')
     cookieValue = None
     try:
-      cookieValue = self.request.cookies['corpoCookie']
+      cookieValue = self.request.cookies['FT_Cookie']
     except KeyError:
       logging.info('no cookie')
     if cookieValue:
@@ -773,7 +786,7 @@ class Friends(webapp2.RequestHandler):
   def get(self):
     cookieValue = None
     try:
-      cookieValue = self.request.cookies['corpoCookie']
+      cookieValue = self.request.cookies['FT_Cookie']
     except KeyError:
       logging.info('no cookie')
     if cookieValue:
@@ -801,8 +814,24 @@ class Friends(webapp2.RequestHandler):
         friend = results[0]
         friends.append(friend)
 
+      requestPath = str(self.request.path)
+      logging.info(requestPath)
       path = os.path.join(os.path.dirname(__file__), 'templates/friends.html')
-      self.response.out.write(template.render(path, {'friends' : friends}))
+      self.response.out.write(template.render(path, {'friends' : friends, 'path' : requestPath}))
+
+
+class Logout(webapp2.RequestHandler):
+  def get(self):
+    cookie = None
+    try:
+      cookie = self.request.cookies['FT_Cookie']
+    except KeyError:
+      logging.info('no cookie')
+    if cookie:
+      cookieString = str('FT_Cookie=%s; expires=Thu, 01-Jan-1970 00:00:01 GMT' % cookie)
+      self.response.headers.add_header('Set-Cookie', cookieString)
+
+    self.redirect("/")
 
 app = webapp2.WSGIApplication([('/', Index,),
                                ('/fs_auth', FS_OAuthRequest),
@@ -821,5 +850,6 @@ app = webapp2.WSGIApplication([('/', Index,),
                                ('/findTrips', FindTrips),
                                ('/hidePhoto', HidePhoto),
                                ('/friends', Friends),
-                               ('/merge', MergeIgFs)],
+                               ('/merge', MergeIgFs),
+                               ('/logout', Logout)],
                               debug=True)

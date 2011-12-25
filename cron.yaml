@@ -1,4 +1,7 @@
 cron:
 - description: update all photos
-  url: /updateAllPhotos
+  url: /update/photos
   schedule: every 20 minutes
+- description: update all friends
+  url: /update/friends
+  schedule: every 24 hours

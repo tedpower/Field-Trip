@@ -40,8 +40,16 @@
                 {% endif %}
             </div>
             <div id="toggle" class="clearfix">
-                <div id="you"><a href="#">You</a></div>
-                <div id="friends"><a href="/friends" class="inactive">Friends</a></div>
+                <div id="you"><a href="/"
+                {% ifequal path '/' %}
+                  class="selected"
+                {% endifequal %}
+                >You</a></div>
+                <div id="friends"><a href="/friends"
+                {% ifequal path '/friends' %}
+                  class="selected"
+                {% endifequal %}
+                >Friends</a></div>
             </div>
 
             <ul id="menubox">

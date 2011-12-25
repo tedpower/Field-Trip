@@ -1,14 +1,14 @@
 $(document).ready(function(){
 
     var currentPhoto = null;
-    
+
     $("#logout").click(function(){
-    	$.cookies.del('corpoCookie');
+    	$.cookies.del('FT_Cookie');
         window.location.href = "/";
     });
 
     $('html').click(function() {
-        $('#menubox').hide(); 
+        $('#menubox').hide();
     });
 
     $('#menubox').click(function(event){
@@ -19,21 +19,21 @@ $(document).ready(function(){
         event.stopPropagation();
         $('#menubox').toggle();
     });
-    
+
     $(".photo").click(function() {
         currentPhoto = "#l" + $(this).attr('id');
         $(currentPhoto).removeClass('hidden');
         $('#hide').removeClass('invisible');
         $('body').addClass('theaterMode');
     });
-    
+
     $(".lightbox").click(function() {
         $(this).addClass('hidden');
         currentPhoto = null;
         $('#hide').addClass('invisible');
         $('body').removeClass('theaterMode');
     });
-    
+
 
  $(document).keydown(function(e){
      if (e.keyCode == 37) {
@@ -60,8 +60,8 @@ $(document).ready(function(){
         return false;
      }
  });
- // 
- // $(window).scroll(function () { 
+ //
+ // $(window).scroll(function () {
  //     if ($(window).scrollTop() >= $(document).height() - $(window).height() - 10) {
  //           alert('at bottom');
  //     }
