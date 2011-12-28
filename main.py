@@ -96,20 +96,8 @@ class FS_OAuthRequestValid(webapp2.RequestHandler):
       self_response_json = urlfetch.fetch(self_response_url, validate_certificate=False)
       self_response = simplejson.loads(self_response_json.content)
 
-      cookieValue = None
-      try:
-        cookieValue = self.request.cookies['FT_Cookie']
-      except KeyError:
-        logging.info('no cookie')
-      if cookieValue:
-        currentUser = User.get_by_key_name(cookieValue)
-      else:
-        u = uuid.uuid4()
-        currentUser = User(key_name=str(u))
-
-        # set the cookie! TODO: make this something like today + 2 weeks?
-        cookieString = str('FT_Cookie=%s; expires=Fri, 31-Dec-2020 23:59:59 GMT' % currentUser.key().name())
-        self.response.headers.add_header('Set-Cookie', cookieString)
+      u = uuid.uuid4()
+      currentUser = User(key_name=str(u))
 
       currentUser.fs_token = access_token['access_token']
       currentUser.fs_id = str(self_response['response']['user']['id'])
@@ -131,6 +119,10 @@ class FS_OAuthRequestValid(webapp2.RequestHandler):
 
       taskqueue.add(url='/fs_justphotos', params={'key': currentUser.key().name()})
 
+    # set the cookie! TODO: make this something like today + 2 weeks?
+    cookieString = str('FT_Cookie=%s; expires=Fri, 31-Dec-2020 23:59:59 GMT' % currentUser.key().name())
+    self.response.headers.add_header('Set-Cookie', cookieString)
+
     self.redirect("/")
 
 
@@ -149,25 +141,21 @@ class IG_OAuthRequestValid(webapp2.RequestHandler):
         logging.info('user exists')
         currentUser = results[0]
     else:
-      cookieValue = None
-      try:
-        cookieValue = self.request.cookies['FT_Cookie']
-      except KeyError:
-        logging.info('no cookie')
-      if cookieValue:
-        currentUser = User.get_by_key_name(cookieValue)
-      else:
-        u = uuid.uuid4()
-        currentUser = User(key_name=str(u))
-        # set the cookie! TODO: make this something like today + 2 weeks?
-        cookieString = str('FT_Cookie=%s; expires=Fri, 31-Dec-2020 23:59:59 GMT' % currentUser.key().name())
-        self.response.headers.add_header('Set-Cookie', cookieString)
+      u = uuid.uuid4()
+      currentUser = User(key_name=str(u))
+      # set the cookie! TODO: make this something like today + 2 weeks?
+      cookieString = str('FT_Cookie=%s; expires=Fri, 31-Dec-2020 23:59:59 GMT' % currentUser.key().name())
+      self.response.headers.add_header('Set-Cookie', cookieString)
 
       currentUser.ig_token = access_token['access_token']
       currentUser.ig_id = str(access_token['user']['id'])
       currentUser.put()
 
       taskqueue.add(url='/ig_justphotos', params={'key': currentUser.key().name()})
+
+    # set the cookie! TODO: make this something like today + 2 weeks?
+    cookieString = str('FT_Cookie=%s; expires=Fri, 31-Dec-2020 23:59:59 GMT' % currentUser.key().name())
+    self.response.headers.add_header('Set-Cookie', cookieString)
 
     self.redirect("/")
 
@@ -197,6 +185,14 @@ class FB_OAuthRequestValid(webapp2.RequestHandler):
       if cookieValue:
         currentUser = User.get_by_key_name(cookieValue)
         currentUser.fb_token = access_token
+
+        # get the fb id
+        fb_url = "https://graph.facebook.com/me?access_token=%s" % (currentUser.fb_token)
+        logging.info(fb_url)
+        fb_json = urlfetch.fetch(fb_url, validate_certificate=False)
+        fb_response = simplejson.loads(fb_json.content)
+        currentUser.fb_id = fb_response['id']
+
         currentUser.put()
 
     self.redirect("/")
@@ -354,10 +350,6 @@ def findTripRanges(currentUser, photos, datePts):
   newTrips.append(currentTrip.key().name())
   currentTrip.put()
 
-  logging.info(len(newTrips))
-  logging.info(newTrips)
-
-
   # now add the photos to the trips
   tripIndx = 0
   thisTrip = Trip.get_by_key_name(newTrips[tripIndx])
@@ -377,14 +369,9 @@ def findTripRanges(currentUser, photos, datePts):
   thisTrip.put()
 
   tripList = []
-
-  logging.info('hi')
-  logging.info(len(newTrips))
-
   # now loop through and delete trips without photos
   for trip in newTrips:
     thisTrip = Trip.get_by_key_name(trip)
-    logging.info(thisTrip.start_date)
     if not thisTrip.photos and not thisTrip.ongoing:
       thisTrip.delete()
     else:
@@ -403,6 +390,13 @@ def findTripRanges(currentUser, photos, datePts):
       tripList.remove(tripList[i+1])
     else:
       i += 1
+
+  # check if the ongoing trip has photos
+  currentTrip = Trip.get_by_key_name(tripList[0])
+  if currentTrip.photos:
+    currentUser.lastTripWithPhotos = tripList[0]
+  else:
+    currentUser.lastTripWithPhotos = tripList[1]
 
   return tripList
 
@@ -791,27 +785,9 @@ class Friends(webapp2.RequestHandler):
       logging.info('no cookie')
     if cookieValue:
       currentUser = User.get_by_key_name(cookieValue)
-
-      allUsers = User.all()
-      allUserKeys = []
-      for user in allUsers:
-        if user.fs_id is not None:
-          allUserKeys.append(user.fs_id)
-      logging.info(allUserKeys)
-
-      a_multiset = collections.Counter(allUserKeys)
-      b_multiset = collections.Counter(currentUser.fs_friends)
-
-      overlap = list((a_multiset & b_multiset).elements())
-      logging.info(overlap)
-
       friends = []
-      for friendKey in overlap:
-        query = db.Query(User)
-        query.filter('fs_id =', friendKey)
-        results = query.fetch(limit=1)
-      if len(results) > 0:
-        friend = results[0]
+      for friendKey in currentUser.all_friends:
+        friend = User.get_by_key_name(friendKey)
         friends.append(friend)
 
       requestPath = str(self.request.path)

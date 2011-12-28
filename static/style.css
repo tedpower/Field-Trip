@@ -135,7 +135,6 @@ a:hover {
 /* Logged In Body ---------- */
 
 body.loggedin {
-	background: url(bg.png);
 	text-shadow: 0 1px 0 #ffffff;
 	min-width: 825px;
 }

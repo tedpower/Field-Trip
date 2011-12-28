@@ -1,6 +1,7 @@
 import logging
 import time
 import datetime
+import collections
 import webapp2
 from operator import itemgetter, attrgetter
 from google.appengine.api import urlfetch
@@ -101,43 +102,99 @@ class UpdateAllPhotos(webapp2.RequestHandler):
       user.put()
       logging.info('end')
 
-      # check friends
 
 class UpdateAllFriends(webapp2.RequestHandler):
   def get(self):
-    userList = User.all()
-    photoDiff = []
 
-    # 1. make a list of all fb ids and fs ids in the system
     allUsers = User.all()
-    allUserKeys = []
+
+    # First make a list of all fb ids and fs ids in the system
+    FS_userKeys = []
+    FB_userKeys = []
     for user in allUsers:
       if user.fs_id is not None:
-        allUserKeys.append(user.fs_id)
-    logging.info(allUserKeys)
+        FS_userKeys.append(user.fs_id)
+      if user.fb_id is not None:
+        FB_userKeys.append(user.fb_id)
 
-    for user in userList:
+    logging.info(FS_userKeys)
+    logging.info(FB_userKeys)
+    logging.info('-------')
 
-      a_multiset = collections.Counter(allUserKeys)
-      b_multiset = collections.Counter(currentUser.fs_friends)
+    for user in allUsers:
+      overlap = []
 
-      overlap = list((a_multiset & b_multiset).elements())
+      if user.fs_token is not None:
+
+        # first update the fs friends
+        fs_friends = FS_friendPull(user, [], 0)
+
+        # find overlaps between all friends and friends on field trip
+        a_multiset = collections.Counter(FS_userKeys)
+        b_multiset = collections.Counter(fs_friends)
+        intersect = list((a_multiset & b_multiset).elements())
+
+        for friendKey in intersect:
+          query = db.Query(User)
+          query.filter('fs_id =', friendKey)
+          results = query.fetch(limit=1)
+        if len(results) > 0:
+          friend = results[0]
+          overlap.append(friend.key().name())
+
+      if user.fb_token is not None:
+
+        # update fb friends
+        fb_friends = FB_friendPull(user)
+
+        # find overlaps between all friends and friends on field trip
+        a_multiset = collections.Counter(FB_userKeys)
+        b_multiset = collections.Counter(fb_friends)
+        intersect = list((a_multiset & b_multiset).elements())
+
+        for friendKey in intersect:
+          query = db.Query(User)
+          query.filter('fb_id =', friendKey)
+          results = query.fetch(limit=1)
+        if len(results) > 0:
+          friend = results[0]
+          overlap.append(friend.key().name())
+
+      logging.info('here it is')
       logging.info(overlap)
+      # dedupe the list
+      overlap = list(set(overlap))
+      logging.info(overlap)
+      logging.info('-------')
 
-      friends = []
-      for friendKey in overlap:
-        query = db.Query(User)
-        query.filter('fs_id =', friendKey)
-        results = query.fetch(limit=1)
-      if len(results) > 0:
-        friend = results[0]
-        friends.append(friend)
+      user.all_friends = overlap
+      user.put()
 
-      # next update facebook friends
-      # don't store 4sq friends, store friends on here
 
-      path = os.path.join(os.path.dirname(__file__), 'templates/friends.html')
-      self.response.out.write(template.render(path, {'friends' : friends}))
+def FS_friendPull(currentUser, fs_friends, indx):
+  indxStart = indx
+  friends_url = "https://api.foursquare.com/v2/users/self/friends?offset=%s&limit=500&oauth_token=%s" % (indx, currentUser.fs_token)
+  friends_json = urlfetch.fetch(friends_url, validate_certificate=False)
+  friends_response = simplejson.loads(friends_json.content)
+  count = friends_response['response']['friends']['count']
+  for friend in friends_response['response']['friends']['items']:
+    if friend['relationship'] == 'friend':
+      fs_friends.append(friend['id'])
+    indx += 1
+  if indx < count and indxStart != indx:
+    recursiveFriendPull(currentUser, fs_friends, indx)
+  else:
+    return fs_friends
+
+
+def FB_friendPull(currentUser):
+  fb_friends = []
+  friends_url = "https://graph.facebook.com/me/friends?access_token=%s" % (currentUser.fb_token)
+  friends_json = urlfetch.fetch(friends_url, validate_certificate=False)
+  friends_response = simplejson.loads(friends_json.content)
+  for friend in friends_response['data']:
+    fb_friends.append(friend['id'])
+  return fb_friends
 
 
 app = webapp2.WSGIApplication([('/update/photos', UpdateAllPhotos),

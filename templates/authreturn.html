@@ -8,7 +8,6 @@
         {% if trip.home %}
           <h2>Home in {{user.fs_homeCity}}</h2>
           <div class="trip clearfix">
-
             {% for photo in trip.get_all_photos %}
               {% if not photo.hidden %}
                 <div id="{{photo.key_id}}" class="photo home" style="background-image:url({{ photo.fs_300 }})"></div>
@@ -16,14 +15,17 @@
             {% endfor %}
           </div>
         {% else %}
-
           <h2>{{ trip.title }}
             <div class="date">
-              {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
-                {{ trip.start_date|date:"M j, Y" }}
+              {% if trip.end_date %}
+                {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
+                  {{ trip.start_date|date:"M j, Y" }}
+                {% else %}
+                  {{ trip.start_date|date:"M j, Y" }} - {{ trip.end_date|date:"M j, Y" }}
+                {% endifequal %}
               {% else %}
-                {{ trip.start_date|date:"M j, Y" }} - {{ trip.end_date|date:"M j, Y" }}
-              {% endifequal %}
+                {{ trip.start_date|date:"M j, Y" }} - now
+              {% endif %}
             </div>
           </h2>
           <div class="trip clearfix">

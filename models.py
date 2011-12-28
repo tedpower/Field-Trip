@@ -8,6 +8,10 @@ class User(db.Model):
     fs_id = db.StringProperty()
     ig_id = db.StringProperty()
     fb_id = db.StringProperty()
+    fs_photos = db.StringListProperty()
+    ig_photos = db.StringListProperty()
+    all_photos = db.StringListProperty()
+    all_friends = db.StringListProperty()
     fs_firstName = db.StringProperty()
     fs_lastName = db.StringProperty()
     fs_email = db.EmailProperty()
@@ -16,16 +20,13 @@ class User(db.Model):
     homeCityLng = db.FloatProperty()
     radius = db.IntegerProperty(default=30)
     fs_profilePic = db.StringProperty()
-    fs_photos = db.StringListProperty()
-    ig_photos = db.StringListProperty()
-    all_photos = db.StringListProperty()
     # photoCount = db.IntegerProperty()
     trips = db.StringListProperty()
     twitter = db.StringProperty()
     last_updated = db.DateTimeProperty(auto_now_add=True)
     complete_stage = db.IntegerProperty()
-    fs_friends = db.StringListProperty()
     ongoingTrip = db.StringProperty()
+    lastTripWithPhotos = db.StringProperty()
 
     @property
     def get_all_photos(self):
@@ -58,7 +59,7 @@ class User(db.Model):
     @property
     def get_ongoing_chunk(self):
         photos = []
-        for photoKey in Trip.get_by_key_name(self.ongoingTrip).photos:
+        for photoKey in Trip.get_by_key_name(self.lastTripWithPhotos).photos:
             photos.append(Photo.get_by_key_name(photoKey))
             if len(photos) > 16:
                 break
