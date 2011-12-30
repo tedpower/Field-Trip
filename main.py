@@ -92,12 +92,21 @@ class FS_OAuthRequestValid(webapp2.RequestHandler):
       logging.info('user exists')
       currentUser = results[0]
     else:
+
+      cookieValue = None
+      try:
+        cookieValue = self.request.cookies['FT_Cookie']
+      except KeyError:
+        logging.info('no cookie')
+      if cookieValue:
+        currentUser = User.get_by_key_name(cookieValue)
+      else:
+        u = uuid.uuid4()
+        currentUser = User(key_name=str(u))
+
       self_response_url = "https://api.foursquare.com/v2/users/self?oauth_token=%s" % (access_token['access_token'])
       self_response_json = urlfetch.fetch(self_response_url, validate_certificate=False)
       self_response = simplejson.loads(self_response_json.content)
-
-      u = uuid.uuid4()
-      currentUser = User(key_name=str(u))
 
       currentUser.fs_token = access_token['access_token']
       currentUser.fs_id = str(self_response['response']['user']['id'])
@@ -110,10 +119,7 @@ class FS_OAuthRequestValid(webapp2.RequestHandler):
       currentUser.fs_homeCity = self_response['response']['user']['homeCity']
       currentUser.fs_email = self_response['response']['user']['contact']['email']
 
-      if currentUser.ig_id:
-        currentUser.complete_stage = 2 # both ig and fs
-      else:
-        currentUser.complete_stage = 1 # just fs
+      currentUser.complete_stage = 1 # just fs
 
       currentUser.put()
 
@@ -141,14 +147,22 @@ class IG_OAuthRequestValid(webapp2.RequestHandler):
         logging.info('user exists')
         currentUser = results[0]
     else:
-      u = uuid.uuid4()
-      currentUser = User(key_name=str(u))
-      # set the cookie! TODO: make this something like today + 2 weeks?
-      cookieString = str('FT_Cookie=%s; expires=Fri, 31-Dec-2020 23:59:59 GMT' % currentUser.key().name())
-      self.response.headers.add_header('Set-Cookie', cookieString)
+      cookieValue = None
+      try:
+        cookieValue = self.request.cookies['FT_Cookie']
+      except KeyError:
+        logging.info('no cookie')
+      if cookieValue:
+        currentUser = User.get_by_key_name(cookieValue)
+      else:
+        u = uuid.uuid4()
+        currentUser = User(key_name=str(u))
 
       currentUser.ig_token = access_token['access_token']
       currentUser.ig_id = str(access_token['user']['id'])
+
+      currentUser.complete_stage = 1 # just fs
+
       currentUser.put()
 
       taskqueue.add(url='/ig_justphotos', params={'key': currentUser.key().name()})
@@ -396,7 +410,10 @@ def findTripRanges(currentUser, photos, datePts):
   if currentTrip.photos:
     currentUser.lastTripWithPhotos = tripList[0]
   else:
-    currentUser.lastTripWithPhotos = tripList[1]
+    if len(tripList) > 1:
+      currentUser.lastTripWithPhotos = tripList[1]
+    elif len(currentUser.trips) > 1:
+      currentUser.lastTripWithPhotos = currentUser.trips[1]
 
   return tripList
 
@@ -609,7 +626,6 @@ class FS_JustPhotos(webapp2.RequestHandler):
     currentUser = User.get_by_key_name(key)
     FS_RecursivePhotoPull(currentUser, 0)
     currentUser.put()
-    taskqueue.add(url='/getFriends', params={'key': currentUser.key().name()})
 
 
 def FS_RecursivePhotoPull(currentUser, indx):
@@ -618,17 +634,16 @@ def FS_RecursivePhotoPull(currentUser, indx):
   photos_json = urlfetch.fetch(photos_url, validate_certificate=False)
   photos_response = simplejson.loads(photos_json.content)
   count = photos_response['response']['photos']['count']
-  # TODO if count == 0:
-    # some sort of error handling
   logging.info('fetching ' + photos_url + " count is " + str(count))
   for photo in photos_response['response']['photos']['items']:
     if 'lat' in photo['venue']['location']:
       newPhoto = FS_LoadPhoto(photo, currentUser)
       newPhoto.put()
       currentUser.fs_photos.append(newPhoto.key_id)
-      indx += 1
-      if indx == 50: # quick return to get something up on the screen
-        currentUser.put()
+    indx += 1
+    if indx == 50: # quick return to get something up on the screen
+      currentUser.put()
+  logging.info("indx is " + str(indx) + " count is " + str(count))
   if indx < count and indxStart != indx:
     FS_RecursivePhotoPull(currentUser, indx)
 
@@ -731,29 +746,6 @@ class Preview(webapp2.RequestHandler):
         self.response.out.write(template.render(path, {'user':currentUser, 'loading': True }))
 
 
-class GetFriends(webapp2.RequestHandler):
-  def post(self):
-    key = self.request.get('key')
-    currentUser = User.get_by_key_name(key)
-    recursiveFriendPull(currentUser, 0)
-    currentUser.put()
-
-
-def recursiveFriendPull(currentUser, indx):
-  indxStart = indx
-  friends_url = "https://api.foursquare.com/v2/users/self/friends?offset=%s&limit=500&oauth_token=%s" % (indx, currentUser.fs_token)
-  friends_json = urlfetch.fetch(friends_url, validate_certificate=False)
-  friends_response = simplejson.loads(friends_json.content)
-  count = friends_response['response']['friends']['count']
-  logging.info('fetching ' + friends_url + " count is " + str(count))
-  for friend in friends_response['response']['friends']['items']:
-    if friend['relationship'] == 'friend':
-      currentUser.fs_friends.append(friend['id'])
-    indx += 1
-  if indx < count and indxStart != indx:
-    recursiveFriendPull(currentUser, indx)
-
-
 class HidePhoto(webapp2.RequestHandler):
   def get(self):
     photoID = self.request.get('id')
@@ -790,6 +782,7 @@ class Friends(webapp2.RequestHandler):
         friend = User.get_by_key_name(friendKey)
         friends.append(friend)
 
+      logging.info(friends)
       requestPath = str(self.request.path)
       logging.info(requestPath)
       path = os.path.join(os.path.dirname(__file__), 'templates/friends.html')
@@ -822,7 +815,6 @@ app = webapp2.WSGIApplication([('/', Index,),
                                ('/freshstart', FreshStart),
                                ('/freshstartworker', FreshStartWorker),
                                ('/preview', Preview),
-                               ('/getFriends', GetFriends),
                                ('/findTrips', FindTrips),
                                ('/hidePhoto', HidePhoto),
                                ('/friends', Friends),

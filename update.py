@@ -133,14 +133,15 @@ class UpdateAllFriends(webapp2.RequestHandler):
         a_multiset = collections.Counter(FS_userKeys)
         b_multiset = collections.Counter(fs_friends)
         intersect = list((a_multiset & b_multiset).elements())
+        logging.info(intersect)
 
         for friendKey in intersect:
           query = db.Query(User)
           query.filter('fs_id =', friendKey)
           results = query.fetch(limit=1)
-        if len(results) > 0:
-          friend = results[0]
-          overlap.append(friend.key().name())
+          if len(results) > 0:
+            friend = results[0]
+            overlap.append(friend.key().name())
 
       if user.fb_token is not None:
 
@@ -156,9 +157,9 @@ class UpdateAllFriends(webapp2.RequestHandler):
           query = db.Query(User)
           query.filter('fb_id =', friendKey)
           results = query.fetch(limit=1)
-        if len(results) > 0:
-          friend = results[0]
-          overlap.append(friend.key().name())
+          if len(results) > 0:
+            friend = results[0]
+            overlap.append(friend.key().name())
 
       logging.info('here it is')
       logging.info(overlap)
