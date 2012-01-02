@@ -19,46 +19,48 @@ class UpdateAllPhotos(webapp2.RequestHandler):
       lastUpdated = str(int(time.mktime(user.last_updated.timetuple())))
 
       # update instagram
-      self_response_url = "https://api.instagram.com/v1/users/self/media/recent/?min_timestamp=%s&access_token=%s" % (lastUpdated, user.ig_token)
-      self_response_json = urlfetch.fetch(self_response_url, validate_certificate=False)
-      self_response = simplejson.loads(self_response_json.content)
-      logging.info(self_response_url)
-      for photo in self_response['data']:
-        if int(photo['created_time']) > int(lastUpdated):
-          if photo['location']:
-            if 'latitude' in photo['location']:
-              logging.info('adding an ig photo')
-              newPhoto = main.IG_AddPhoto(photo)
-              newPhoto.put()
-              user.ig_photos.append(newPhoto.key_id)
-              photoDiff.append(newPhoto)
+      if user.ig_token:
+        self_response_url = "https://api.instagram.com/v1/users/self/media/recent/?min_timestamp=%s&access_token=%s" % (lastUpdated, user.ig_token)
+        self_response_json = urlfetch.fetch(self_response_url, validate_certificate=False)
+        self_response = simplejson.loads(self_response_json.content)
+        logging.info(self_response_url)
+        for photo in self_response['data']:
+          if int(photo['created_time']) > int(lastUpdated):
+            if photo['location']:
+              if 'latitude' in photo['location']:
+                logging.info('adding an ig photo')
+                newPhoto = main.IG_AddPhoto(photo)
+                newPhoto.put()
+                user.ig_photos.append(newPhoto.key_id)
+                photoDiff.append(newPhoto)
 
       # update fs photos
-      photos_url = "https://api.foursquare.com/v2/users/self/photos?limit=100&oauth_token=%s" % (user.fs_token)
-      photos_json = urlfetch.fetch(photos_url, validate_certificate=False)
-      photos_response = simplejson.loads(photos_json.content)
-      logging.info('fetching ' + photos_url)
-      for photo in photos_response['response']['photos']['items']:
-        if int(photo['createdAt']) > int(lastUpdated):
-          if 'lat' in photo['venue']['location']:
-            logging.info('adding a fs photo ' + photo['url'])
-            newPhoto = main.FS_LoadPhoto(photo, user)
-            newPhoto.put()
-            user.fs_photos.append(newPhoto.key_id)
-            photoDiff.append(newPhoto)
+      if user.fs_token:
+        photos_url = "https://api.foursquare.com/v2/users/self/photos?limit=100&oauth_token=%s" % (user.fs_token)
+        photos_json = urlfetch.fetch(photos_url, validate_certificate=False)
+        photos_response = simplejson.loads(photos_json.content)
+        logging.info('fetching ' + photos_url)
+        for photo in photos_response['response']['photos']['items']:
+          if int(photo['createdAt']) > int(lastUpdated):
+            if 'lat' in photo['venue']['location']:
+              logging.info('adding a fs photo ' + photo['url'])
+              newPhoto = main.FS_LoadPhoto(photo, user)
+              newPhoto.put()
+              user.fs_photos.append(newPhoto.key_id)
+              photoDiff.append(newPhoto)
 
-      # get new date points
-      datePtsDiff = []
-      photos_url = "https://api.foursquare.com/v2/users/self/checkins?afterTimestamp=%s&limit=200&oauth_token=%s" % (lastUpdated, user.fs_token)
-      photos_json = urlfetch.fetch(photos_url, validate_certificate=False)
-      photos_response = simplejson.loads(photos_json.content)
-      logging.info(photos_url)
-      for item in photos_response['response']['checkins']['items']:
-        if 'venue' in item: # we need this check to weed out shouts
-          if 'lat' in item['venue']['location']:
-            lat = float(item['venue']['location']['lat'])
-            lng = float(item['venue']['location']['lng'])
-            datePtsDiff.append((datetime.datetime.fromtimestamp(item['createdAt']), db.GeoPt(lat=lat,lon=lng)))
+        # get new date points
+        datePtsDiff = []
+        photos_url = "https://api.foursquare.com/v2/users/self/checkins?afterTimestamp=%s&limit=200&oauth_token=%s" % (lastUpdated, user.fs_token)
+        photos_json = urlfetch.fetch(photos_url, validate_certificate=False)
+        photos_response = simplejson.loads(photos_json.content)
+        logging.info(photos_url)
+        for item in photos_response['response']['checkins']['items']:
+          if 'venue' in item: # we need this check to weed out shouts
+            if 'lat' in item['venue']['location']:
+              lat = float(item['venue']['location']['lat'])
+              lng = float(item['venue']['location']['lng'])
+              datePtsDiff.append((datetime.datetime.fromtimestamp(item['createdAt']), db.GeoPt(lat=lat,lon=lng)))
 
       if len(photoDiff) > 0 or len(datePtsDiff) > 0:
 
