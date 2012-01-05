@@ -2,11 +2,6 @@ $(document).ready(function(){
 
     var currentPhoto = null;
 
-    $("#logout").click(function(){
-    	$.cookies.del('FT_Cookie');
-        window.location.href = "/";
-    });
-
     $('html').click(function() {
         $('#menubox').hide();
     });
@@ -60,10 +55,4 @@ $(document).ready(function(){
         return false;
      }
  });
- //
- // $(window).scroll(function () {
- //     if ($(window).scrollTop() >= $(document).height() - $(window).height() - 10) {
- //           alert('at bottom');
- //     }
- // });
 });

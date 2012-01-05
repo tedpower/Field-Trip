@@ -36,7 +36,7 @@ class Index(webapp2.RequestHandler):
       else:
         requestPath = self.request.path
         logging.info(requestPath)
-        path = os.path.join(os.path.dirname(__file__), 'templates/authreturn.html')
+        path = os.path.join(os.path.dirname(__file__), 'templates/you.html')
         self.response.out.write(template.render(path, {'user' : cookieUser, 'path' : requestPath}))
     else:
       path = os.path.join(os.path.dirname(__file__), 'templates/index.html')
