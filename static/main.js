@@ -1,4 +1,36 @@
+function updatePhotos() {
+  if ($(window).scrollTop() >= $("#photos").height() - $(window).height() - 1000) {
+    $("#loading").toggle();
+    var nextTrip = $('#next').text();
+    $.ajax({
+      url: "/tripLoad?startAt="  + nextTrip,
+      cache: false,
+      success: function(html){
+        $("#ajax").replaceWith(html);
+      }
+    });
+    hasRun = true;
+    currentTrip = Number(nextTrip) - 1;
+    $("#trip" + currentTrip).find(".photo").click(function() {
+      currentPhoto = "#l" + $(this).attr('id');
+      $(currentPhoto).removeClass('hidden');
+      $('#hide').removeClass('invisible');
+      $('body').addClass('theaterMode');
+    });
+
+    $("#trip" + currentTrip).find(".lightbox").click(function() {
+      $(this).addClass('hidden');
+      currentPhoto = null;
+      $('#hide').addClass('invisible');
+      $('body').removeClass('theaterMode');
+    });
+
+  }
+}
+
 $(document).ready(function(){
+
+    var hasRun = false;
 
     var currentPhoto = null;
 
@@ -15,19 +47,7 @@ $(document).ready(function(){
         $('#menubox').toggle();
     });
 
-    $(".photo").click(function() {
-        currentPhoto = "#l" + $(this).attr('id');
-        $(currentPhoto).removeClass('hidden');
-        $('#hide').removeClass('invisible');
-        $('body').addClass('theaterMode');
-    });
 
-    $(".lightbox").click(function() {
-        $(this).addClass('hidden');
-        currentPhoto = null;
-        $('#hide').addClass('invisible');
-        $('body').removeClass('theaterMode');
-    });
 
 
  $(document).keydown(function(e){

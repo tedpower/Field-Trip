@@ -17,10 +17,35 @@
         </div>
       </h2>
     {% endif %}
-    <div class="trip clearfix">
+    <div class="trip clearfix" id="trip{{ next|add:"-1" }}">
       {% for photo in trip.get_all_photos %}
         {% if not photo.hidden %}
           <div id="{{photo.key_id}}" class="photo home" style="background-image:url({{ photo.fs_300 }})"></div>
+
+          <div id="l{{photo.key_id}}"  class="lightbox hidden">
+            <div class="zoomContent" style="width:{{ photo.width }}px;">
+              <img src="{{ photo.photo_url }}">
+              <div class="meta" style="width:{{ photo.width }}px;">
+                {% if photo.shout %}
+                  <div class="shout"><span class="firstname">{{ user.fs_firstName }}:</span> "{{photo.shout}}"</div>
+                {% endif %}
+                {% if photo.fs_venue_name and photo.fs_venue_id %}
+                  <a class="venue" href="https://foursquare.com/v/{{photo.fs_venue_id}}">{{photo.fs_venue_name}}</a>
+                {% else %}
+                  {% if photo.fs_venue_name %}
+                    <div class="venue">{{photo.fs_venue_name}}</div>
+                  {% endif %}
+                {% endif %}
+                {% if photo.link %}
+                  <a class="date" href="{{ photo.link }}">{{ photo.fs_createdAt|date:"M j, Y" }}</a>
+                {% else %}
+                  <div class="date">{{ photo.fs_createdAt|date:"M j, Y" }}</div>
+                {% endif %}
+                <a href="/hidePhoto?id={{ photo.key_id }}">Hide</a>
+              </div>
+            </div>
+          </div>
+
         {% endif %}
       {% endfor %}
     </div>
@@ -29,20 +54,7 @@
     <div id="loading" style="display:none">Loading...</div>
     <div id="next" style="display:none">{{ next }}</div>
     <script>
-      var hasRun = false;
-      function updatePhotos() {
-        if ($(window).scrollTop() >= $("#photos").height() - $(window).height() - 1000) {
-          $("#loading").toggle();
-          $.ajax({
-            url: "/tripLoad?startAt="  + $('#next').text(),
-            cache: false,
-            success: function(html){
-              $("#ajax").replaceWith(html);
-            }
-          });
-          hasRun = true;
-        }
-      }
+      hasRun = false;
       $(window).scroll(function () {
         if (!hasRun) {
           updatePhotos();

@@ -3,19 +3,14 @@
 
 <div id="photos">
   <div id="ajax">
+    <div id="loading" style="display:none">Loading...</div>
+    <div id="next" style="display:none">0</div>
     <script>
-    function updatePhotos() {
-      $.ajax({
-        url: "/tripLoad?startAt=0",
-        cache: false,
-        success: function(html){
-          $("#ajax").replaceWith(html);
-        }
-      });
-    }
-    updatePhotos();
+      updatePhotos();
     </script>
   </div>
 </div>
+
+<div id="hide" class="invisible"></div>
 
 {% endblock %}
