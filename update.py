@@ -174,6 +174,35 @@ class UpdateAllFriends(webapp2.RequestHandler):
       user.put()
 
 
+class UpdateFriendTrips(webapp2.RequestHandler):
+  def get(self):
+    allUsers = User.all()
+    for user in allUsers:
+      allTripsList = [];
+      for friendKey in user.all_friends:
+        friend = User.get_by_key_name(friendKey)
+        for tripKey in friend.trips:
+          trip = Trip.get_by_key_name(tripKey)
+          if trip.photos:
+            latestPhoto = Photo.get_by_key_name(trip.photos[0])
+            allTripsList.append((tripKey, latestPhoto.fs_createdAt))
+
+      for tripKey in user.trips:
+        trip = Trip.get_by_key_name(tripKey)
+        if trip.photos:
+          latestPhoto = Photo.get_by_key_name(trip.photos[0])
+          allTripsList.append((tripKey, latestPhoto.fs_createdAt))
+
+      # sort them chronologically... this needs to handle ongoing trips
+      allTripsList = sorted(allTripsList, key=itemgetter(1), reverse=True)
+
+      orderedKeys = []
+      for tripTuple in allTripsList:
+        orderedKeys.append(tripTuple[0])
+      user.friends_trips = orderedKeys
+      user.put()
+
+
 def FS_friendPull(currentUser, fs_friends, indx):
   indxStart = indx
   friends_url = "https://api.foursquare.com/v2/users/self/friends?offset=%s&limit=500&oauth_token=%s" % (indx, currentUser.fs_token)
@@ -201,7 +230,7 @@ def FB_friendPull(currentUser):
 
 
 app = webapp2.WSGIApplication([('/update/photos', UpdateAllPhotos),
+                               ('/update/friendtrips', UpdateFriendTrips),
                                ('/update/friends', UpdateAllFriends)], debug=True)
-
 
 

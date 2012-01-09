@@ -420,6 +420,10 @@ body.loggedin {
 
 /* Friends ---------- */
 
+.friendTrip {
+  padding-bottom: 30px;
+}
+
 .friendTrip img:first-child {
     width: 160px;
     height: 160px;

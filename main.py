@@ -317,6 +317,7 @@ def findTripRanges(currentUser, photos, datePts):
   tripKey = "f" + currentUser.fs_id + "d" + str(int(time.mktime(currentTime.timetuple())))
   currentTrip = Trip(key_name=tripKey)
   currentTrip.key_id = tripKey
+  currentTrip.user_id = currentUser.key().name()
   currentTrip.ongoing = True
   currentUser.ongoingTrip = currentTrip.key_id
 
@@ -343,6 +344,7 @@ def findTripRanges(currentUser, photos, datePts):
       tripKey = "f" + currentUser.fs_id + "d" + str(int(time.mktime(currentTime.timetuple())))
       currentTrip = Trip(key_name=tripKey)
       currentTrip.key_id = tripKey
+      currentTrip.user_id = currentUser.key().name()
       currentTrip.end_date = datePts[i][0]
       currentTrip.home = False
     elif checkinDstnc < currentUser.radius and currentTrip.home == False:
@@ -355,6 +357,7 @@ def findTripRanges(currentUser, photos, datePts):
       tripKey = "f" + currentUser.fs_id + "d" + str(int(time.mktime(currentTime.timetuple())))
       currentTrip = Trip(key_name=tripKey)
       currentTrip.key_id = tripKey
+      currentTrip.user_id = currentUser.key().name()
       currentTrip.end_date = datePts[i][0]
       currentTrip.home = True
     prevCheckinDate = datePts[i][0]
@@ -691,61 +694,6 @@ def FS_LoadPhoto(photo, currentUser):
   return newPhoto
 
 
-class Preview(webapp2.RequestHandler):
-  def get(self):
-    logging.info('starting')
-
-    cookieValue = None
-    try:
-      cookieValue = self.request.cookies['FT_Cookie']
-    except KeyError:
-      logging.info('no cookie')
-    if cookieValue:
-
-      logging.info('in here')
-
-      currentUser = User.get_by_key_name(cookieValue)
-      startAt = int(self.request.get("startAt"))
-      mode = int(self.request.get("mode"))
-      pull = int(self.request.get("pull"))
-      endAt = startAt + pull # 51
-      listOfPhotos = []
-
-      if (mode == 1) and ((len(currentUser.fs_photos) + len(currentUser.ig_photos)) > 0):
-        logging.info('mode is 1')
-        for photoKey in currentUser.fs_photos:
-          listOfPhotos.append(Photo.get_by_key_name(photoKey))
-          if len(listOfPhotos) >= pull:
-            break
-        for photoKey in currentUser.ig_photos:
-          listOfPhotos.append(Photo.get_by_key_name(photoKey))
-          if len(listOfPhotos) >= pull:
-            break
-        path = os.path.join(os.path.dirname(__file__), 'templates/preview.html')
-        self.response.out.write(template.render(path, {'photos' : listOfPhotos}))
-
-      elif currentUser.all_photos:
-        allLen = len(currentUser.all_photos)
-        moreLeft = False
-        if endAt < allLen:
-          moreLeft = True
-          for photoKey in currentUser.all_photos[startAt : endAt]:
-            listOfPhotos.append(Photo.get_by_key_name(photoKey))
-          path = os.path.join(os.path.dirname(__file__), 'templates/preview.html')
-          self.response.out.write(template.render(path, {'photos' : listOfPhotos[:-1], 'more': moreLeft, 'startNext': endAt - 1}))
-        else:
-          endAt = allLen
-          for photoKey in currentUser.all_photos[startAt : endAt]:
-            listOfPhotos.append(Photo.get_by_key_name(photoKey))
-          path = os.path.join(os.path.dirname(__file__), 'templates/preview.html')
-          self.response.out.write(template.render(path, {'photos' : listOfPhotos, 'more': moreLeft}))
-        logging.info("startat is " + str(startAt) + " end is " + str(endAt))
-      else:
-        logging.info('hey!')
-        path = os.path.join(os.path.dirname(__file__), 'templates/preview.html')
-        self.response.out.write(template.render(path, {'user':currentUser, 'loading': True }))
-
-
 class TripLoad(webapp2.RequestHandler):
   def get(self):
     cookieValue = None
@@ -798,16 +746,14 @@ class Friends(webapp2.RequestHandler):
       logging.info('no cookie')
     if cookieValue:
       currentUser = User.get_by_key_name(cookieValue)
-      friends = []
-      for friendKey in currentUser.all_friends:
-        friend = User.get_by_key_name(friendKey)
-        friends.append(friend)
+      trips = []
+      for tripKey in currentUser.friends_trips:
+        trips.append(Trip.get_by_key_name(tripKey))
 
-      logging.info(friends)
       requestPath = str(self.request.path)
       logging.info(requestPath)
       path = os.path.join(os.path.dirname(__file__), 'templates/friends.html')
-      self.response.out.write(template.render(path, {'friends' : friends, 'path' : requestPath}))
+      self.response.out.write(template.render(path, {'trips' : trips, 'path' : requestPath}))
 
 
 class Logout(webapp2.RequestHandler):
@@ -835,7 +781,6 @@ app = webapp2.WSGIApplication([('/', Index,),
                                ('/settings', Settings),
                                ('/freshstart', FreshStart),
                                ('/freshstartworker', FreshStartWorker),
-                               ('/preview', Preview),
                                ('/tripLoad', TripLoad),
                                ('/findTrips', FindTrips),
                                ('/hidePhoto', HidePhoto),

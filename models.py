@@ -22,6 +22,7 @@ class User(db.Model):
     fs_profilePic = db.StringProperty()
     # photoCount = db.IntegerProperty()
     trips = db.StringListProperty()
+    friends_trips = db.StringListProperty()
     twitter = db.StringProperty()
     last_updated = db.DateTimeProperty(auto_now_add=True)
     complete_stage = db.IntegerProperty()
@@ -98,6 +99,7 @@ class IG_Photo(db.Model):
 class Trip(db.Model):
     # key is the checkin id of the first checkin
     key_id = db.StringProperty()
+    user_id = db.StringProperty()
     photos = db.StringListProperty()
     title = db.StringProperty()
     start_date = db.DateTimeProperty()
@@ -113,3 +115,43 @@ class Trip(db.Model):
         if self.home == False:
             listOfPhotos.reverse()
         return listOfPhotos
+
+    @property
+    def get_photos_mini(self):
+        maxPhotos = 15
+        totalPhotos = len(self.photos)
+        remainingPhotos = totalPhotos - maxPhotos
+        listOfPhotos = []
+        for photoKey in self.photos:
+            listOfPhotos.append(Photo.get_by_key_name(photoKey))
+            if len(listOfPhotos) > 15:
+                break
+        if self.home == False:
+            listOfPhotos.reverse()
+
+        tripWidth = None
+        if totalPhotos == 1:
+            tripWidth = 164
+        elif 1 < totalPhotos < 4:
+            tripWidth = 246
+        elif 3 < totalPhotos < 6:
+            tripWidth = 328
+        elif 5 < totalPhotos < 8:
+            tripWidth = 410
+        elif 7 < totalPhotos < 10:
+            tripWidth = 492
+        elif 9 < totalPhotos < 12:
+            tripWidth = 574
+        elif 11 < totalPhotos < 14:
+            tripWidth = 656
+        elif 13 < totalPhotos < 16:
+            tripWidth = 738
+        elif totalPhotos > 15:
+            tripWidth = 820
+
+        return (listOfPhotos, remainingPhotos, tripWidth)
+
+    @property
+    def get_mini_user(self):
+        thisUser = User.get_by_key_name(self.user_id)
+        return thisUser
