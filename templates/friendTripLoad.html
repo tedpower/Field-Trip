@@ -22,7 +22,7 @@
         updateFriendPhotos();
       }
     });
-    if ($("#photos").height() < $(window).height() + 1000) {
+    if ($(window).scrollTop() >= $("#photos").height() - $(window).height() - 1000) {
       updateFriendPhotos();
     }
   </script>

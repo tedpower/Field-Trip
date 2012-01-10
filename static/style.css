@@ -20,12 +20,12 @@ a:hover {
 /* Logged In Header ---------- */
 
 #header {
-	background: url(header_bg.png) repeat-x;
 	height: 54px;
 	position: fixed;
 	top: 0;
 	left: 0;
 	right: 0;
+  background-color: #fff;
 }
 
 #headwrap {
