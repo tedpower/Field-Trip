@@ -1,0 +1,29 @@
+<!-- <img src="{{ trip.get_mini_user.fs_profilePic }}"> -->
+<p>{{ trip.get_mini_user.fs_firstName }}</p>
+{% if trip.title %}
+  <p>{{ trip.title }}</p>
+{% endif %}
+<div class="friendTrip clearfix" style="width:{{ trip.get_photos_mini.2 }}px;">
+{% for photo in trip.get_photos_mini.0 %}
+  <img src="{{ photo.fs_300 }}">
+{% endfor %}
+{% if trip.get_photos_mini.1 > 0 %}
+  <p>+ {{ trip.get_photos_mini.1 }}</p>
+{% endif %}
+</div>
+
+<div id="ajax">
+  <div id="loading" style="display:none">Loading...</div>
+  <div id="next" style="display:none">{{ next }}</div>
+  <script>
+    hasRun = false;
+    $(window).scroll(function () {
+      if (!hasRun) {
+        updateFriendPhotos();
+      }
+    });
+    if ($("#photos").height() < $(window).height() + 1000) {
+      updateFriendPhotos();
+    }
+  </script>
+</div>

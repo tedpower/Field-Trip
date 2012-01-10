@@ -17,40 +17,50 @@ function updatePhotos() {
       $('#hide').removeClass('invisible');
       $('body').addClass('theaterMode');
     });
-
     $("#trip" + currentTrip).find(".lightbox").click(function() {
       $(this).addClass('hidden');
       currentPhoto = null;
       $('#hide').addClass('invisible');
       $('body').removeClass('theaterMode');
     });
+  }
+}
 
+function updateFriendPhotos() {
+  if ($(window).scrollTop() >= $("#photos").height() - $(window).height() - 1000) {
+    $("#loading").toggle();
+    var nextTrip = $('#next').text();
+    $.ajax({
+      url: "/friendTripLoad?startAt="  + nextTrip,
+      cache: false,
+      success: function(html){
+        $("#ajax").replaceWith(html);
+      }
+    });
+    hasRun = true;
   }
 }
 
 $(document).ready(function(){
 
-    var hasRun = false;
+  var hasRun = false;
 
-    var currentPhoto = null;
+  var currentPhoto = null;
 
-    $('html').click(function() {
-        $('#menubox').hide();
-    });
+  $('html').click(function() {
+    $('#menubox').hide();
+  });
 
-    $('#menubox').click(function(event){
-        event.stopPropagation();
-    });
+  $('#menubox').click(function(event){
+    event.stopPropagation();
+  });
 
-    $('#menu').click(function(event){
-        event.stopPropagation();
-        $('#menubox').toggle();
-    });
+  $('#menu').click(function(event){
+    event.stopPropagation();
+    $('#menubox').toggle();
+  });
 
-
-
-
- $(document).keydown(function(e){
+  $(document).keydown(function(e){
      if (e.keyCode == 37) {
          if ($(currentPhoto).prev().attr('id') != 'hide') {
             $(currentPhoto).addClass('hidden');

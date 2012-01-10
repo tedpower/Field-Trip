@@ -715,6 +715,27 @@ class TripLoad(webapp2.RequestHandler):
         self.response.out.write(template.render(path, {'trip' : thisTrip, 'next' : startAt + 1}))
 
 
+class FriendTripLoad(webapp2.RequestHandler):
+  def get(self):
+    cookieValue = None
+    try:
+      cookieValue = self.request.cookies['FT_Cookie']
+    except KeyError:
+      logging.info('no cookie')
+    if cookieValue:
+      currentUser = User.get_by_key_name(cookieValue)
+      startAt = int(self.request.get("startAt"))
+      if len(currentUser.friends_trips) > startAt:
+        thisTrip = Trip.get_by_key_name(currentUser.friends_trips[startAt])
+        while not thisTrip.photos:
+          startAt += 1
+          thisTrip = Trip.get_by_key_name(currentUser.friends_trips[startAt])
+        logging.info(thisTrip.title)
+        logging.info(thisTrip.key_id)
+        path = os.path.join(os.path.dirname(__file__), 'templates/friendTripLoad.html')
+        self.response.out.write(template.render(path, {'trip' : thisTrip, 'next' : startAt + 1}))
+
+
 class HidePhoto(webapp2.RequestHandler):
   def get(self):
     photoID = self.request.get('id')
@@ -782,6 +803,7 @@ app = webapp2.WSGIApplication([('/', Index,),
                                ('/freshstart', FreshStart),
                                ('/freshstartworker', FreshStartWorker),
                                ('/tripLoad', TripLoad),
+                               ('/friendTripLoad', FriendTripLoad),
                                ('/findTrips', FindTrips),
                                ('/hidePhoto', HidePhoto),
                                ('/friends', Friends),
