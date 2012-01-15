@@ -8,8 +8,6 @@
     <LINK REL=StyleSheet href="/static/style.css" TYPE="text/css" MEDIA=screen>
     <link rel="icon" type="image/png" href="static/temp.png">
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
-    <script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?sensor=false"></script>
-    <script type="text/javascript" src="/static/main.js"></script>
 
     <script type="text/javascript">
       var _gaq = _gaq || [];
@@ -25,17 +23,56 @@
 </head>
 <body id="onboarding">
 
-<div id="photoContainer">
-  <div id="modal">
-  <a href="/ig_auth">Sign in with instagram</a>
-| <a href="/fs_auth">Sign in with foursquare</a>
-| <a href="/fb_auth">FB auth</a>
+<h1>1/2</h1>
+
+{% if errors %}
+  {% for error in errors %}
+    <p>{{ error }}</p>
+  {% endfor %}
+{% endif %}
+<form method="post" action="/signup" id="signup">
+  <div class="signupRow">
+    <label>First Name</label>
+    <input type="text" name="fname" value="{% spaceless %}
+      {% if user.firstName %}
+        {{ user.firstName }}
+      {% endif %}
+    {% endspaceless %}"/>
+  </div>
+  <div class="signupRow">
+    <label>Last Name</label>
+    <input type="text" name="lname" value="{% spaceless %}
+      {% if user.lastName %}
+        {{ user.lastName }}
+      {% endif %}
+    {% endspaceless %}" />
+  </div>
+  <div class="signupRow">
+    <label>Email</label>
+    <input type="text" name="email" value="{% spaceless %}
+      {% if user.email %}
+        {{ user.email }}
+      {% endif %}
+    {% endspaceless %}" />
+  </div>
+  <div class="signupRow">
+    <label>Home Town (where you currently live)</label>
+    <input type="text" name="homeCity" value="{% spaceless %}
+      {% if user.homeCity %}
+        {{ user.homeCity }}
+      {% endif %}
+    {% endspaceless %}" />
+  </div>
+  <div class="signupRow">
+    <input type="submit" value="Submit" />
+  </div>
+</form>
+
+
+
 | <a href="/merge">merge instagram and 4sq</a>
 | <a href="/findTrips">Find Trips</a>
 | <a href="/logout" id="logout">Log out</a>
-</div>
-
-</div>
 
 
 </body>

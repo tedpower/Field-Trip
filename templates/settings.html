@@ -11,9 +11,9 @@ $(document).ready(function(){
     center: latlng,
     mapTypeId: google.maps.MapTypeId.ROADMAP
   };
-  
+
   var currentRadius = {{user.radius}} * 1609.344
-  
+
   var map = new google.maps.Map(document.getElementById("map_canvas"),
       myOptions);
       // Construct the circle for each value in citymap. We scale population by 20.
@@ -32,8 +32,8 @@ $(document).ready(function(){
 </script>
 
   <form>
-    Home city: <input type="text" name="homeTow" value="{{user.fs_homeCity}}" />
-    Radius: 
+    Home city: <input type="text" name="homeTow" value="{{user.homeCity}}" />
+    Radius:
     <select>
       <option>20 miles</option>
       <option selected>30 miles</option>

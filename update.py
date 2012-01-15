@@ -31,7 +31,7 @@ class UpdateAllPhotos(webapp2.RequestHandler):
                 logging.info('adding an ig photo')
                 newPhoto = main.IG_AddPhoto(photo)
                 newPhoto.put()
-                user.ig_photos.append(newPhoto.key_id)
+                user.get_ig_photos.photos.append(newPhoto.key_id)
                 photoDiff.append(newPhoto)
 
       # update fs photos
@@ -46,7 +46,7 @@ class UpdateAllPhotos(webapp2.RequestHandler):
               logging.info('adding a fs photo ' + photo['url'])
               newPhoto = main.FS_LoadPhoto(photo, user)
               newPhoto.put()
-              user.fs_photos.append(newPhoto.key_id)
+              user.get_fs_photos.photos.append(newPhoto.key_id)
               photoDiff.append(newPhoto)
 
         # get new date points
@@ -88,7 +88,7 @@ class UpdateAllPhotos(webapp2.RequestHandler):
         tripDiff = main.findTripRanges(user, photoDiff, datePtsDiff)
 
         # Loop through and name the trips
-        main.nameTrips(tripDiff)
+        main.nameTrips(tripDiff, user.homeCity)
 
         # if there are any airports adjacent to a trip, add them to that trip
         main.airportJiggle(tripDiff)

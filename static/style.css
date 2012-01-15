@@ -187,11 +187,9 @@ body.loggedin {
     display: block;
 }
 
-.trip {
-  clear:both;
+.tripPhotos {
   padding: 23px 0 36px 0;
 }
-
 
 .date {
     font-size: 12px;
@@ -384,52 +382,18 @@ body.loggedin {
 
 /* Onboarding --------- */
 
-#onboarding #photos {
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-.prev {
-  margin: 0;
-  width: 160px;
-  height: 160px;
-  float: left;
-}
-
-#photoContainer {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    overflow: hidden;
-}
-
-#modal {
-    position: fixed;
-    top: 160px;
-    left: 50%;
-    margin-left: -300px;
-    width: 600px;
-    height: 300px;
-    background-color: #fff;
-    -webkit-box-shadow: 0 0 1px rgba(0, 0, 0, .6), 0 1px 5px 3px rgba(0, 0, 0, .05), 0 5px 4px -3px rgba(0, 0, 0, .06);
+#signup {
+  width: 500px;
 }
 
 /* Friends ---------- */
 
-.friendTrip {
-  padding-bottom: 30px;
-}
-
-.friendTrip img:first-child {
+.friendTrip .friendPhoto:first-child {
     width: 160px;
     height: 160px;
 }
 
-.friendTrip img {
+.friendTrip .friendPhoto {
     width: 78px;
     height: 78px;
     vertical-align: top;

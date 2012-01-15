@@ -31,8 +31,7 @@ class Index(webapp2.RequestHandler):
       logging.info('cookie found')
       cookieUser = User.get_by_key_name(cookieValue)
       if cookieUser.complete_stage == 1:
-        path = os.path.join(os.path.dirname(__file__), 'templates/onboarding.html')
-        self.response.out.write(template.render(path, {'user' : cookieUser}))
+        self.redirect("/signup")
       else:
         requestPath = self.request.path
         logging.info(requestPath)
@@ -110,16 +109,23 @@ class FS_OAuthRequestValid(webapp2.RequestHandler):
 
       currentUser.fs_token = access_token['access_token']
       currentUser.fs_id = str(self_response['response']['user']['id'])
-      currentUser.fs_firstName = self_response['response']['user']['firstName']
-      currentUser.fs_lastName = self_response['response']['user']['lastName']
+      if not currentUser.firstName:
+        currentUser.firstName = self_response['response']['user']['firstName']
+      if not currentUser.lastName:
+        currentUser.lastName = self_response['response']['user']['lastName']
       if 'twitter' in self_response['response']['user']['contact']:
         currentUser.twitter = self_response['response']['user']['contact']['twitter']
       if 'photo' in  self_response['response']['user']:
         currentUser.fs_profilePic = self_response['response']['user']['photo']
-      currentUser.fs_homeCity = self_response['response']['user']['homeCity']
-      currentUser.fs_email = self_response['response']['user']['contact']['email']
+      if not currentUser.homeCity:
+        currentUser.homeCity = self_response['response']['user']['homeCity']
+      if not currentUser.email:
+        currentUser.email = self_response['response']['user']['contact']['email']
+      u = uuid.uuid4()
+      currentUser.fs_photos = str(u)
 
-      currentUser.complete_stage = 1 # just fs
+      if not currentUser.ig_token:
+        currentUser.complete_stage = 1 # just fs
 
       currentUser.put()
 
@@ -160,8 +166,11 @@ class IG_OAuthRequestValid(webapp2.RequestHandler):
 
       currentUser.ig_token = access_token['access_token']
       currentUser.ig_id = str(access_token['user']['id'])
+      u = uuid.uuid4()
+      currentUser.ig_photos = str(u)
 
-      currentUser.complete_stage = 1 # just fs
+      if not currentUser.fs_token:
+        currentUser.complete_stage = 1 # just ig
 
       currentUser.put()
 
@@ -212,6 +221,119 @@ class FB_OAuthRequestValid(webapp2.RequestHandler):
     self.redirect("/")
 
 
+class FS_JustPhotos(webapp2.RequestHandler):
+  def post(self):
+    key = self.request.get('key')
+    currentUser = User.get_by_key_name(key)
+    photoIndx = PhotoIndex(key_name=currentUser.fs_photos)
+    FS_RecursivePhotoPull(currentUser, photoIndx, 0)
+    photoIndx.put()
+
+
+def FS_RecursivePhotoPull(currentUser, photoIndx, indx):
+  indxStart = indx
+  photos_url = "https://api.foursquare.com/v2/users/self/photos?offset=%s&limit=500&oauth_token=%s" % (indx, currentUser.fs_token)
+  photos_json = urlfetch.fetch(photos_url, validate_certificate=False)
+  photos_response = simplejson.loads(photos_json.content)
+  count = photos_response['response']['photos']['count']
+  logging.info('fetching ' + photos_url + " count is " + str(count))
+  for photo in photos_response['response']['photos']['items']:
+    if 'venue' in photo:
+      if 'lat' in photo['venue']['location']:
+        newPhoto = FS_LoadPhoto(photo, currentUser)
+        newPhoto.put()
+        photoIndx.photos.append(newPhoto.key_id)
+    indx += 1
+  logging.info("indx is " + str(indx) + " count is " + str(count))
+  if indx < count and indxStart != indx:
+    FS_RecursivePhotoPull(currentUser, photoIndx, indx)
+
+
+# variation of add photos for the /photos endpoint
+def FS_LoadPhoto(photo, currentUser):
+  photoID = str(photo['id'])
+  newPhoto = Photo(key_name=photoID)
+  newPhoto.key_id = photoID
+  newPhoto.fs_venue_name = photo['venue']['name']
+  newPhoto.fs_venue_id = photo['venue']['id']
+  if 'checkin' in photo:
+    newPhoto.fs_checkin_id = photo['checkin']['id']
+    userPath = ""
+    if currentUser.twitter:
+      userPath = currentUser.twitter
+    else:
+      userPath = currentUser.fs_id
+    newPhoto.link = "https://foursquare.com/%s/checkin/%s" % (userPath, newPhoto.fs_checkin_id)
+    if 'shout' in photo['checkin']:
+      newPhoto.shout = photo['checkin']['shout']
+  if 'address' in photo['venue']['location']:
+    newPhoto.fs_address = photo['venue']['location']['address']
+  if 'crossStreet' in photo['venue']['location']:
+    newPhoto.fs_crossStreet = photo['venue']['location']['crossStreet']
+  if 'city' in photo['venue']['location']:
+    newPhoto.fs_city = photo['venue']['location']['city']
+  if 'state' in photo['venue']['location']:
+    newPhoto.fs_state = photo['venue']['location']['state']
+  if 'country' in photo['venue']['location']:
+    newPhoto.fs_country = photo['venue']['location']['country']
+  if 'categories' in photo['venue']:
+    if len(photo['venue']['categories']) > 0:
+      newPhoto.cat_id = photo['venue']['categories'][0]['id']
+      newPhoto.cat_name = photo['venue']['categories'][0]['name']
+  if photo['source']['name'] == 'Instagram':
+    newPhoto.ig_pushed_to_fs = True
+  newPhoto.fs_lat = photo['venue']['location']['lat']
+  newPhoto.fs_lng = photo['venue']['location']['lng']
+  newPhoto.photo_url = photo['url']
+  newPhoto.width = photo['sizes']['items'][0]['width']
+  newPhoto.height = photo['sizes']['items'][0]['height']
+  newPhoto.fs_300 = photo['sizes']['items'][1]['url']
+  newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(photo['createdAt'])
+  return newPhoto
+
+
+class IG_JustPhotos(webapp2.RequestHandler):
+  def post(self):
+    key = self.request.get('key')
+    currentUser = User.get_by_key_name(key)
+    photoIndx = PhotoIndex(key_name=currentUser.ig_photos)
+    IG_LoadPhotos(currentUser, photoIndx)
+    photoIndx.put()
+
+
+def IG_LoadPhotos(currentUser, photoIndx):
+  self_response_url = "https://api.instagram.com/v1/users/self/media/recent/?access_token=%s" % (currentUser.ig_token)
+  self_response_json = urlfetch.fetch(self_response_url, validate_certificate=False)
+  self_response = simplejson.loads(self_response_json.content)
+  logging.info(self_response_url)
+
+  for photo in self_response['data']:
+    if photo['location']:
+      if 'latitude' in photo['location']:
+        newPhoto = IG_AddPhoto(photo)
+        newPhoto.put()
+        photoIndx.photos.append(newPhoto.key_id)
+
+
+def IG_AddPhoto(photo):
+  photoID = photo['id']
+  newPhoto = Photo(key_name=photoID)
+  newPhoto.key_id = photoID
+  newPhoto.photo_url = photo['images']['standard_resolution']['url']
+  newPhoto.width = photo['images']['standard_resolution']['width']
+  newPhoto.height = photo['images']['standard_resolution']['height']
+  newPhoto.fs_300 = photo['images']['low_resolution']['url']
+  newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(float(photo['created_time']))
+  newPhoto.fs_lat = float(photo['location']['latitude'])
+  newPhoto.fs_lng = float(photo['location']['longitude'])
+  if 'name' in photo['location']:
+    newPhoto.fs_venue_name = photo['location']['name']
+  if photo['caption'] is not None:
+    newPhoto.shout = photo['caption']['text']
+  newPhoto.link = photo['link']
+  return newPhoto
+
+
 # probably make this a taskque
 class MergeIgFs(webapp2.RequestHandler):
   def get(self):
@@ -224,7 +346,7 @@ class MergeIgFs(webapp2.RequestHandler):
       currentUser = User.get_by_key_name(cookieValue)
       currentUser.all_photos = []
 
-      allPhotosKeys = currentUser.fs_photos + currentUser.ig_photos
+      allPhotosKeys = currentUser.get_fs_photos.photos + currentUser.get_ig_photos.photos
       allPhotos = []
       for key in allPhotosKeys:
         allPhotos.append(Photo.get_by_key_name(key))
@@ -246,19 +368,6 @@ class FindTrips(webapp2.RequestHandler):
       logging.info('no cookie')
     if cookieValue:
       currentUser = User.get_by_key_name(cookieValue)
-      # get the lat long from Google
-      homeCitySlug = currentUser.fs_homeCity.replace(" ", "+")
-      google_url = "http://maps.googleapis.com/maps/api/geocode/json?address=%s&sensor=false" % (homeCitySlug)
-      google_json = urlfetch.fetch(google_url, validate_certificate=False)
-      google_response = simplejson.loads(google_json.content)
-      logging.info(google_url)
-      logging.info(google_response)
-      if len(google_response['results']) > 0:
-        currentUser.homeCityLat = google_response['results'][0]['geometry']['location']['lat']
-        currentUser.homeCityLng = google_response['results'][0]['geometry']['location']['lng']
-      else: # TODO: remove this, sets it ny
-        currentUser.homeCityLat = 40.7143528
-        currentUser.homeCityLng = -74.00597309999999
 
       # now get the photos!
       allDatePts = []
@@ -282,7 +391,7 @@ class FindTrips(webapp2.RequestHandler):
       currentUser.trips = findTripRanges(currentUser, allPhotos, allDatePts)
 
       # Loop through and name the trips
-      nameTrips(currentUser.trips)
+      nameTrips(currentUser.trips, currentUser.homeCity)
 
       # if there are any airports adjacent to a trip, add them to that trip
       airportJiggle(currentUser.trips)
@@ -421,7 +530,7 @@ def findTripRanges(currentUser, photos, datePts):
   return tripList
 
 
-def nameTrips(trips):
+def nameTrips(trips, homeTown):
   for trip in trips:
     thisTrip = Trip.get_by_key_name(trip)
     if thisTrip.home == False:
@@ -493,6 +602,10 @@ def nameTrips(trips):
         thisTrip.title = nameify(thisTrip, states)
       thisTrip.put()
 
+    else:
+      thisTrip.title = homeTown
+      thisTrip.put()
+
 
 def airportJiggle(trips):
   allTrips = len(trips)
@@ -539,159 +652,6 @@ def nameify(trip, places):
             startChunk = startChunk + place + ", "
         title = startChunk + endChunk
     return title
-
-
-def haversine(lat1, lon1, lat2, lon2):
-    """
-    Calculate the great circle distance between two points
-    on the earth (specified in decimal degrees)
-    """
-    # convert decimal degrees to radians
-    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-    # haversine formula
-    dlon = lon2 - lon1
-    dlat = lat2 - lat1
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * atan2(sqrt(a), sqrt(1-a))
-    km = 6367 * c
-    mi = km * .6214
-    return mi
-
-
-class FreshStart(webapp2.RequestHandler):
-    def get(self):
-        taskqueue.add(url='/freshstartworker', params={})
-        self.redirect("/")
-
-
-class FreshStartWorker(webapp2.RequestHandler):
-    def post(self):
-        ######### DANGER! this empties the datastore ##############
-        query = db.GqlQuery("SELECT * FROM Photo")
-        for q in query:
-          db.delete(q)
-        query = db.GqlQuery("SELECT * FROM User")
-        for q in query:
-          db.delete(q)
-        query = db.GqlQuery("SELECT * FROM Trip")
-        for q in query:
-          db.delete(q)
-        query = db.GqlQuery("SELECT * FROM IG_Photo")
-        for q in query:
-          db.delete(q)
-        ############################################################
-
-
-class IG_JustPhotos(webapp2.RequestHandler):
-  def post(self):
-    key = self.request.get('key')
-    currentUser = User.get_by_key_name(key)
-    IG_LoadPhotos(currentUser)
-    currentUser.put()
-
-
-def IG_LoadPhotos(currentUser):
-  self_response_url = "https://api.instagram.com/v1/users/self/media/recent/?access_token=%s" % (currentUser.ig_token)
-  self_response_json = urlfetch.fetch(self_response_url, validate_certificate=False)
-  self_response = simplejson.loads(self_response_json.content)
-  logging.info(self_response_url)
-
-  for photo in self_response['data']:
-    if photo['location']:
-      if 'latitude' in photo['location']:
-        newPhoto = IG_AddPhoto(photo)
-        newPhoto.put()
-        currentUser.ig_photos.append(newPhoto.key_id)
-
-
-def IG_AddPhoto(photo):
-  photoID = photo['id']
-  newPhoto = Photo(key_name=photoID)
-  newPhoto.key_id = photoID
-  newPhoto.photo_url = photo['images']['standard_resolution']['url']
-  newPhoto.width = photo['images']['standard_resolution']['width']
-  newPhoto.height = photo['images']['standard_resolution']['height']
-  newPhoto.fs_300 = photo['images']['low_resolution']['url']
-  newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(float(photo['created_time']))
-  newPhoto.fs_lat = float(photo['location']['latitude'])
-  newPhoto.fs_lng = float(photo['location']['longitude'])
-  if 'name' in photo['location']:
-    newPhoto.fs_venue_name = photo['location']['name']
-  if photo['caption'] is not None:
-    newPhoto.shout = photo['caption']['text']
-  newPhoto.link = photo['link']
-  return newPhoto
-
-
-class FS_JustPhotos(webapp2.RequestHandler):
-  def post(self):
-    key = self.request.get('key')
-    currentUser = User.get_by_key_name(key)
-    FS_RecursivePhotoPull(currentUser, 0)
-    currentUser.put()
-
-
-def FS_RecursivePhotoPull(currentUser, indx):
-  indxStart = indx
-  photos_url = "https://api.foursquare.com/v2/users/self/photos?offset=%s&limit=500&oauth_token=%s" % (indx, currentUser.fs_token)
-  photos_json = urlfetch.fetch(photos_url, validate_certificate=False)
-  photos_response = simplejson.loads(photos_json.content)
-  count = photos_response['response']['photos']['count']
-  logging.info('fetching ' + photos_url + " count is " + str(count))
-  for photo in photos_response['response']['photos']['items']:
-    if 'lat' in photo['venue']['location']:
-      newPhoto = FS_LoadPhoto(photo, currentUser)
-      newPhoto.put()
-      currentUser.fs_photos.append(newPhoto.key_id)
-    indx += 1
-    if indx == 50: # quick return to get something up on the screen
-      currentUser.put()
-  logging.info("indx is " + str(indx) + " count is " + str(count))
-  if indx < count and indxStart != indx:
-    FS_RecursivePhotoPull(currentUser, indx)
-
-
-# variation of add photos for the /photos endpoint
-def FS_LoadPhoto(photo, currentUser):
-  photoID = str(photo['id'])
-  newPhoto = Photo(key_name=photoID)
-  newPhoto.key_id = photoID
-  newPhoto.fs_venue_name = photo['venue']['name']
-  newPhoto.fs_venue_id = photo['venue']['id']
-  if 'checkin' in photo:
-    newPhoto.fs_checkin_id = photo['checkin']['id']
-    userPath = ""
-    if currentUser.twitter:
-      userPath = currentUser.twitter
-    else:
-      userPath = currentUser.fs_id
-    newPhoto.link = "https://foursquare.com/%s/checkin/%s" % (userPath, newPhoto.fs_checkin_id)
-    if 'shout' in photo['checkin']:
-      newPhoto.shout = photo['checkin']['shout']
-  if 'address' in photo['venue']['location']:
-    newPhoto.fs_address = photo['venue']['location']['address']
-  if 'crossStreet' in photo['venue']['location']:
-    newPhoto.fs_crossStreet = photo['venue']['location']['crossStreet']
-  if 'city' in photo['venue']['location']:
-    newPhoto.fs_city = photo['venue']['location']['city']
-  if 'state' in photo['venue']['location']:
-    newPhoto.fs_state = photo['venue']['location']['state']
-  if 'country' in photo['venue']['location']:
-    newPhoto.fs_country = photo['venue']['location']['country']
-  if 'categories' in photo['venue']:
-    if len(photo['venue']['categories']) > 0:
-      newPhoto.cat_id = photo['venue']['categories'][0]['id']
-      newPhoto.cat_name = photo['venue']['categories'][0]['name']
-  if photo['source']['name'] == 'Instagram':
-    newPhoto.ig_pushed_to_fs = True
-  newPhoto.fs_lat = photo['venue']['location']['lat']
-  newPhoto.fs_lng = photo['venue']['location']['lng']
-  newPhoto.photo_url = photo['url']
-  newPhoto.width = photo['sizes']['items'][0]['width']
-  newPhoto.height = photo['sizes']['items'][0]['height']
-  newPhoto.fs_300 = photo['sizes']['items'][1]['url']
-  newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(photo['createdAt'])
-  return newPhoto
 
 
 class TripLoad(webapp2.RequestHandler):
@@ -767,14 +727,76 @@ class Friends(webapp2.RequestHandler):
       logging.info('no cookie')
     if cookieValue:
       currentUser = User.get_by_key_name(cookieValue)
-      trips = []
-      for tripKey in currentUser.friends_trips:
-        trips.append(Trip.get_by_key_name(tripKey))
-
       requestPath = str(self.request.path)
-      logging.info(requestPath)
       path = os.path.join(os.path.dirname(__file__), 'templates/friends.html')
-      self.response.out.write(template.render(path, {'trips' : trips, 'path' : requestPath}))
+      self.response.out.write(template.render(path, {'user' : currentUser, 'path' : requestPath}))
+
+
+class Networks(webapp2.RequestHandler):
+  def get(self):
+    cookieValue = None
+    try:
+      cookieValue = self.request.cookies['FT_Cookie']
+    except KeyError:
+      logging.info('no cookie')
+    if cookieValue:
+      currentUser = User.get_by_key_name(cookieValue)
+      requestPath = str(self.request.path)
+      path = os.path.join(os.path.dirname(__file__), 'templates/networks.html')
+      self.response.out.write(template.render(path, {'user' : currentUser, 'path' : requestPath}))
+
+
+class SignUp(webapp2.RequestHandler):
+  def post(self):
+    cookieValue = None
+    try:
+      cookieValue = self.request.cookies['FT_Cookie']
+    except KeyError:
+      logging.info('no cookie')
+    if cookieValue:
+      currentUser = User.get_by_key_name(cookieValue)
+
+      currentUser.firstName = self.request.get('fname')
+      currentUser.lastName = self.request.get('lname')
+      currentUser.email = self.request.get('email')
+      currentUser.homeCity = self.request.get('homeCity')
+
+      errorList = []
+      if currentUser.firstName and currentUser.email and currentUser.homeCity:
+
+        # get the lat long from Google
+        homeCitySlug = currentUser.homeCity.replace(" ", "+")
+        google_url = "http://maps.googleapis.com/maps/api/geocode/json?address=%s&sensor=false" % (homeCitySlug)
+        google_json = urlfetch.fetch(google_url, validate_certificate=False)
+        google_response = simplejson.loads(google_json.content)
+        logging.info(google_url)
+        logging.info(google_response)
+        if len(google_response['results']) > 0:
+          currentUser.homeCityLat = google_response['results'][0]['geometry']['location']['lat']
+          currentUser.homeCityLng = google_response['results'][0]['geometry']['location']['lng']
+        if not currentUser.homeCityLat:
+          errorList.append("Woops! Couldn't find that city")
+      else:
+        errorList.append("Fist name, email, and home city are required")
+
+      if len(errorList) == 0:
+        currentUser.complete_stage = 2
+        currentUser.put()
+        self.redirect("/networks")
+      else:
+        path = os.path.join(os.path.dirname(__file__), 'templates/onboarding.html')
+        self.response.out.write(template.render(path, {'user' : currentUser, 'errors' : errorList}))
+
+  def get(self):
+    cookieValue = None
+    try:
+      cookieValue = self.request.cookies['FT_Cookie']
+    except KeyError:
+      logging.info('no cookie')
+    if cookieValue:
+      currentUser = User.get_by_key_name(cookieValue)
+      path = os.path.join(os.path.dirname(__file__), 'templates/onboarding.html')
+      self.response.out.write(template.render(path, {'user' : currentUser}))
 
 
 class Logout(webapp2.RequestHandler):
@@ -789,6 +811,48 @@ class Logout(webapp2.RequestHandler):
       self.response.headers.add_header('Set-Cookie', cookieString)
 
     self.redirect("/")
+
+
+def haversine(lat1, lon1, lat2, lon2):
+    """
+    Calculate the great circle distance between two points
+    on the earth (specified in decimal degrees)
+    """
+    # convert decimal degrees to radians
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+    # haversine formula
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * atan2(sqrt(a), sqrt(1-a))
+    km = 6367 * c
+    mi = km * .6214
+    return mi
+
+
+class FreshStart(webapp2.RequestHandler):
+    def get(self):
+        taskqueue.add(url='/freshstartworker', params={})
+        self.redirect("/")
+
+
+class FreshStartWorker(webapp2.RequestHandler):
+    def post(self):
+        ######### DANGER! this empties the datastore ##############
+        query = db.GqlQuery("SELECT * FROM Photo")
+        for q in query:
+          db.delete(q)
+        query = db.GqlQuery("SELECT * FROM User")
+        for q in query:
+          db.delete(q)
+        query = db.GqlQuery("SELECT * FROM Trip")
+        for q in query:
+          db.delete(q)
+        query = db.GqlQuery("SELECT * FROM PhotoIndex")
+        for q in query:
+          db.delete(q)
+        ############################################################
+
 
 app = webapp2.WSGIApplication([('/', Index,),
                                ('/fs_auth', FS_OAuthRequest),
@@ -808,5 +872,7 @@ app = webapp2.WSGIApplication([('/', Index,),
                                ('/hidePhoto', HidePhoto),
                                ('/friends', Friends),
                                ('/merge', MergeIgFs),
+                               ('/signup', SignUp),
+                               ('/networks', Networks),
                                ('/logout', Logout)],
                               debug=True)

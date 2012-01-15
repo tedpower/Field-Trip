@@ -8,14 +8,14 @@ class User(db.Model):
     fs_id = db.StringProperty()
     ig_id = db.StringProperty()
     fb_id = db.StringProperty()
-    fs_photos = db.StringListProperty()
-    ig_photos = db.StringListProperty()
+    fs_photos = db.StringProperty()
+    ig_photos = db.StringProperty()
     all_photos = db.StringListProperty()
     all_friends = db.StringListProperty()
-    fs_firstName = db.StringProperty()
-    fs_lastName = db.StringProperty()
-    fs_email = db.EmailProperty()
-    fs_homeCity = db.StringProperty()
+    firstName = db.StringProperty()
+    lastName = db.StringProperty()
+    email = db.EmailProperty()
+    homeCity = db.StringProperty()
     homeCityLat = db.FloatProperty()
     homeCityLng = db.FloatProperty()
     radius = db.IntegerProperty(default=30)
@@ -30,25 +30,12 @@ class User(db.Model):
     lastTripWithPhotos = db.StringProperty()
 
     @property
-    def get_all_photos(self):
-        listOfPhotos = []
-        for photoKey in self.all_photos:
-            listOfPhotos.append(Photo.get_by_key_name(photoKey))
-        return listOfPhotos
+    def get_fs_photos(self):
+        return PhotoIndex.get_by_key_name(self.fs_photos)
 
     @property
-    def get_20_photos(self):
-        listOfPhotos = []
-        for photoKey in self.fs_photos[:20]:
-            listOfPhotos.append(Photo.get_by_key_name(photoKey))
-        return listOfPhotos
-
-    @property
-    def get_all_ig_photos(self):
-        listOfPhotos = []
-        for photoKey in self.ig_photos:
-            listOfPhotos.append(Photo.get_by_key_name(photoKey))
-        return listOfPhotos
+    def get_ig_photos(self):
+        return PhotoIndex.get_by_key_name(self.ig_photos)
 
     @property
     def get_all_trips(self):
@@ -57,14 +44,9 @@ class User(db.Model):
             listOfTrips.append(Trip.get_by_key_name(tripKey))
         return listOfTrips
 
-    @property
-    def get_ongoing_chunk(self):
-        photos = []
-        for photoKey in Trip.get_by_key_name(self.lastTripWithPhotos).photos:
-            photos.append(Photo.get_by_key_name(photoKey))
-            if len(photos) > 16:
-                break
-        return photos
+
+class PhotoIndex(db.Model):
+    photos = db.StringListProperty()
 
 class Photo(db.Model):
     # key is photo id
@@ -112,7 +94,7 @@ class Trip(db.Model):
         listOfPhotos = []
         for photoKey in self.photos:
             listOfPhotos.append(Photo.get_by_key_name(photoKey))
-        if self.home == False:
+        if self.home is False and self.ongoing is False:
             listOfPhotos.reverse()
         return listOfPhotos
 
@@ -126,7 +108,7 @@ class Trip(db.Model):
             listOfPhotos.append(Photo.get_by_key_name(photoKey))
             if len(listOfPhotos) > 15:
                 break
-        if self.home == False:
+        if self.home is False and self.ongoing is False:
             listOfPhotos.reverse()
 
         tripWidth = None

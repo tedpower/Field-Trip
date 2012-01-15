@@ -33,7 +33,7 @@
 
             <a href="/"><img src="static/logo.png" width="160" height="22" alt="Field Trip" id="logo"></a>
             <div id="menu">
-                <div class="profilename">{% if user.fs_firstName %}{{ user.fs_firstName }}{% endif %}</div>
+                <div class="profilename">{% if user.firstName %}{{ user.firstName }}{% endif %}</div>
                 {% if user.fs_profilePic %}
                      <img src="{{ user.fs_profilePic }}" width="30px" height="30px" id="headerprofilepic">
                 {% endif %}
