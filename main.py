@@ -32,6 +32,9 @@ class Index(webapp2.RequestHandler):
       cookieUser = User.get_by_key_name(cookieValue)
       if cookieUser.complete_stage == 1:
         self.redirect("/signup")
+      if cookieUser.complete_stage == 2:
+        path = os.path.join(os.path.dirname(__file__), 'templates/loading.html')
+        self.response.out.write(template.render(path, {}))
       else:
         requestPath = self.request.path
         logging.info(requestPath)
@@ -336,70 +339,59 @@ def IG_AddPhoto(photo):
 
 # probably make this a taskque
 class MergeIgFs(webapp2.RequestHandler):
-  def get(self):
-    cookieValue = None
-    try:
-      cookieValue = self.request.cookies['FT_Cookie']
-    except KeyError:
-      logging.info('no cookie')
-    if cookieValue:
-      currentUser = User.get_by_key_name(cookieValue)
-      currentUser.all_photos = []
+  def post(self):
+    key = self.request.get('key')
+    currentUser = User.get_by_key_name(key)
+    currentUser.all_photos = []
 
-      allPhotosKeys = currentUser.get_fs_photos.photos + currentUser.get_ig_photos.photos
-      allPhotos = []
-      for key in allPhotosKeys:
-        allPhotos.append(Photo.get_by_key_name(key))
-      allPhotos = sorted(allPhotos, key=attrgetter('fs_createdAt'), reverse=True)
-      orderedKeys = []
-      for photo in allPhotos:
-        orderedKeys.append(photo.key_id)
-      currentUser.all_photos = orderedKeys
-      currentUser.put()
-    self.redirect("/")
+    allPhotosKeys = currentUser.get_fs_photos.photos + currentUser.get_ig_photos.photos
+    allPhotos = []
+    for key in allPhotosKeys:
+      allPhotos.append(Photo.get_by_key_name(key))
+    allPhotos = sorted(allPhotos, key=attrgetter('fs_createdAt'), reverse=True)
+    orderedKeys = []
+    for photo in allPhotos:
+      orderedKeys.append(photo.key_id)
+    currentUser.all_photos = orderedKeys
+    currentUser.put()
+    taskqueue.add(url='/findTrips', params={'key': currentUser.key().name()})
 
 
 class FindTrips(webapp2.RequestHandler):
-  def get(self):
-    cookieValue = None
-    try:
-      cookieValue = self.request.cookies['FT_Cookie']
-    except KeyError:
-      logging.info('no cookie')
-    if cookieValue:
-      currentUser = User.get_by_key_name(cookieValue)
+  def post(self):
+    key = self.request.get('key')
+    currentUser = User.get_by_key_name(key)
 
-      # now get the photos!
-      allDatePts = []
-      getDatePts(currentUser, 0, allDatePts)
+    # now get the photos!
+    allDatePts = []
+    getDatePts(currentUser, 0, allDatePts)
 
-      # mix in dates and points from photos
-      for photo in currentUser.all_photos:
-        currentPhoto = Photo.get_by_key_name(photo)
-        lat = currentPhoto.fs_lat
-        lng = currentPhoto.fs_lng
-        point = db.GeoPt(lat=lat,lon=lng)
-        allDatePts.append((currentPhoto.fs_createdAt, point))
+    # mix in dates and points from photos
+    for photo in currentUser.all_photos:
+      currentPhoto = Photo.get_by_key_name(photo)
+      lat = currentPhoto.fs_lat
+      lng = currentPhoto.fs_lng
+      point = db.GeoPt(lat=lat,lon=lng)
+      allDatePts.append((currentPhoto.fs_createdAt, point))
 
-      # sort it by date, reverse chronological
-      allDatePts = sorted(allDatePts, key=itemgetter(0), reverse=True)
+    # sort it by date, reverse chronological
+    allDatePts = sorted(allDatePts, key=itemgetter(0), reverse=True)
 
-      # get the photos and find the trips
-      allPhotos = []
-      for photo in currentUser.all_photos:
-        allPhotos.append(Photo.get_by_key_name(photo))
-      currentUser.trips = findTripRanges(currentUser, allPhotos, allDatePts)
+    # get the photos and find the trips
+    allPhotos = []
+    for photo in currentUser.all_photos:
+      allPhotos.append(Photo.get_by_key_name(photo))
+    currentUser.trips = findTripRanges(currentUser, allPhotos, allDatePts)
 
-      # Loop through and name the trips
-      nameTrips(currentUser.trips, currentUser.homeCity)
+    # Loop through and name the trips
+    nameTrips(currentUser.trips, currentUser.homeCity)
 
-      # if there are any airports adjacent to a trip, add them to that trip
-      airportJiggle(currentUser.trips)
+    # if there are any airports adjacent to a trip, add them to that trip
+    airportJiggle(currentUser.trips)
 
-      currentUser.complete_stage = 3
-      currentUser.put()
-      # logging.info('wop wop!')
-      self.redirect("/")
+    currentUser.complete_stage = 4
+    currentUser.put()
+    # logging.info('wop wop!')
 
 
 # iterates through all checkins from the user
@@ -746,6 +738,39 @@ class Networks(webapp2.RequestHandler):
       self.response.out.write(template.render(path, {'user' : currentUser, 'path' : requestPath}))
 
 
+class LoadingStage(webapp2.RequestHandler):
+  def get(self):
+    cookieValue = None
+    try:
+      cookieValue = self.request.cookies['FT_Cookie']
+    except KeyError:
+      logging.info('no cookie')
+    if cookieValue:
+      currentUser = User.get_by_key_name(cookieValue)
+      if currentUser.complete_stage < 3:
+        ready = True
+        if currentUser.fs_token:
+          if currentUser.get_fs_photos is None:
+            ready = False
+        if currentUser.ig_token:
+          if currentUser.get_ig_photos is None:
+            ready = False
+        if not ready:
+          logging.info('not ready')
+          self.response.out.write('Loading all your photos...')
+        else:
+          logging.info('ready')
+          currentUser.complete_stage = 3
+          currentUser.put()
+          taskqueue.add(url='/merge', params={'key': currentUser.key().name()})
+          self.response.out.write('Merging your photos into trips (this could take a minute) ...')
+      elif currentUser.complete_stage == 3:
+        self.response.out.write('Merging your photos into trips (this could take a minute) ...')
+      elif currentUser.complete_stage == 4:
+        self.response.out.write('<div id="go"></div>')
+
+
+
 class SignUp(webapp2.RequestHandler):
   def post(self):
     cookieValue = None
@@ -874,5 +899,6 @@ app = webapp2.WSGIApplication([('/', Index,),
                                ('/merge', MergeIgFs),
                                ('/signup', SignUp),
                                ('/networks', Networks),
+                               ('/loadingStage', LoadingStage),
                                ('/logout', Logout)],
                               debug=True)
