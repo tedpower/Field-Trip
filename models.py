@@ -98,10 +98,14 @@ class Trip(db.Model):
         for photoKey in self.photos:
             thisPhoto = Photo.get_by_key_name(photoKey)
             if (not thisPhoto.ig_pushed_to_fs) or (thisUser.ig_id == None):
-                listOfPhotos.append(thisPhoto)
+                if thisPhoto.hidden is False:
+                    listOfPhotos.append(thisPhoto)
         if self.home is False and self.ongoing is False:
             listOfPhotos.reverse()
-        return listOfPhotos
+        if len(listOfPhotos) == 0:
+            return False
+        else:
+            return listOfPhotos
 
     @property
     def get_photos_mini(self):
@@ -112,9 +116,10 @@ class Trip(db.Model):
         for photoKey in self.photos:
             thisPhoto = Photo.get_by_key_name(photoKey)
             if (not thisPhoto.ig_pushed_to_fs) or (thisUser.ig_id == None):
-                if len(listOfPhotos) <= maxPhotos:
-                    listOfPhotos.append(thisPhoto)
-                totalPhotos += 1
+                if thisPhoto.hidden is False:
+                    if len(listOfPhotos) <= maxPhotos:
+                        listOfPhotos.append(thisPhoto)
+                    totalPhotos += 1
 
         if self.home is False and self.ongoing is False:
             listOfPhotos.reverse()
@@ -144,7 +149,10 @@ class Trip(db.Model):
         if remainingPhotos > 1:
             listOfPhotos.pop()
 
-        return (listOfPhotos, remainingPhotos, tripWidth)
+        if totalPhotos == 0:
+            return False
+        else:
+            return (listOfPhotos, remainingPhotos, tripWidth)
 
     @property
     def get_mini_user(self):

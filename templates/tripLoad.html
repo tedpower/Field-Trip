@@ -1,71 +1,69 @@
-{% if trip %}
-  {% if trip.photos %}
-    <div class="meTrip">
-      {% if trip.home %}
-        <h2>Home in {{ trip.title }}</h2>
-      {% else %}
-        <h2>{{ trip.title }}
-          <div class="date">
-            {% if trip.end_date %}
-              {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
-                {{ trip.start_date|date:"M j, Y" }}
-              {% else %}
-                {{ trip.start_date|date:"M j, Y" }} - {{ trip.end_date|date:"M j, Y" }}
-              {% endifequal %}
+{% if trip.get_all_photos %}
+  <div class="meTrip">
+    {% if trip.home %}
+      <h2>Home in {{ trip.title }}</h2>
+    {% else %}
+      <h2>{{ trip.title }}
+        <div class="date">
+          {% if trip.end_date %}
+            {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
+              {{ trip.start_date|date:"M j, Y" }}
             {% else %}
-              {{ trip.start_date|date:"M j, Y" }} - now
-            {% endif %}
-          </div>
-        </h2>
-      {% endif %}
-      <div class="tripPhotos clearfix" id="trip{{ next|add:"-1" }}">
-        {% for photo in trip.get_all_photos %}
-          {% if not photo.hidden %}
-            <div id="{{photo.key_id}}" class="photo home" style="background-image:url({{ photo.fs_300 }})"></div>
+              {{ trip.start_date|date:"M j, Y" }} - {{ trip.end_date|date:"M j, Y" }}
+            {% endifequal %}
+          {% else %}
+            {{ trip.start_date|date:"M j, Y" }} - now
+          {% endif %}
+        </div>
+      </h2>
+    {% endif %}
+    <div class="tripPhotos clearfix" id="trip{{ next|add:"-1" }}">
+      {% for photo in trip.get_all_photos %}
+        {% if not photo.hidden %}
+          <div id="{{photo.key_id}}" class="photo home" style="background-image:url({{ photo.fs_300 }})"></div>
 
-            <div id="l{{photo.key_id}}"  class="lightbox hidden">
-              <div class="zoomContent" style="width:{{ photo.width }}px;">
-                <img src="{{ photo.photo_url }}">
-                <div class="meta" style="width:{{ photo.width }}px;">
-                  {% if photo.shout %}
-                    <div class="shout"><span class="firstname">{{ user.firstName }}:</span> "{{photo.shout}}"</div>
+          <div id="l{{photo.key_id}}"  class="lightbox hidden">
+            <div class="zoomContent" style="width:{{ photo.width }}px;">
+              <img src="{{ photo.photo_url }}">
+              <div class="meta" style="width:{{ photo.width }}px;">
+                {% if photo.shout %}
+                  <div class="shout"><span class="firstname">{{ user.firstName }}:</span> "{{photo.shout}}"</div>
+                {% endif %}
+                {% if photo.fs_venue_name and photo.fs_venue_id %}
+                  <a class="venue" href="https://foursquare.com/v/{{photo.fs_venue_id}}">{{photo.fs_venue_name}}</a>
+                {% else %}
+                  {% if photo.fs_venue_name %}
+                    <div class="venue">{{photo.fs_venue_name}}</div>
                   {% endif %}
-                  {% if photo.fs_venue_name and photo.fs_venue_id %}
-                    <a class="venue" href="https://foursquare.com/v/{{photo.fs_venue_id}}">{{photo.fs_venue_name}}</a>
-                  {% else %}
-                    {% if photo.fs_venue_name %}
-                      <div class="venue">{{photo.fs_venue_name}}</div>
-                    {% endif %}
-                  {% endif %}
-                  {% if photo.link %}
-                    <a class="date" href="{{ photo.link }}">{{ photo.fs_createdAt|date:"M j, Y" }}</a>
-                  {% else %}
-                    <div class="date">{{ photo.fs_createdAt|date:"M j, Y" }}</div>
-                  {% endif %}
-                  <a href="/hidePhoto?id={{ photo.key_id }}">Hide</a>
-                </div>
+                {% endif %}
+                {% if photo.link %}
+                  <a class="date" href="{{ photo.link }}">{{ photo.fs_createdAt|date:"M j, Y" }}</a>
+                {% else %}
+                  <div class="date">{{ photo.fs_createdAt|date:"M j, Y" }}</div>
+                {% endif %}
+                <a href="/hidePhoto?id={{ photo.key_id }}">Hide</a>
               </div>
             </div>
+          </div>
 
-          {% endif %}
-        {% endfor %}
-      </div>
+        {% endif %}
+      {% endfor %}
     </div>
-  {% endif %}
-  <div id="ajax">
-    <div id="loading" style="display:none">Loading...</div>
-    <div id="next" style="display:none">{{ next }}</div>
-    <script>
-      hasRun = false;
-      $(window).scroll(function () {
-        if (!hasRun) {
-          updatePhotos();
-        }
-      });
-
-      if ($(window).scrollTop() >= $("#photos").height() - $(window).height() - 1000) {
-        updatePhotos();
-      }
-    </script>
   </div>
 {% endif %}
+<div id="ajax">
+  <div id="loading" style="display:none">Loading...</div>
+  <div id="next" style="display:none">{{ next }}</div>
+  <script>
+    hasRun = false;
+    $(window).scroll(function () {
+      if (!hasRun) {
+        updatePhotos();
+      }
+    });
+
+    if ($(window).scrollTop() >= $("#photos").height() - $(window).height() - 1000) {
+      updatePhotos();
+    }
+  </script>
+</div>
