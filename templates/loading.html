@@ -27,20 +27,20 @@
 <p id="status"></p>
 
 <script>
-function updateMsg() {
-  $.ajax({
-    url: "/loadingStage",
-    cache: false,
-    success: function(html){
-      $("#status").html(html);
+  function checkStatus() {
+    $.ajax({
+      url: "/loadingStage",
+      cache: false,
+      success: function(html){
+        $("#status").html(html);
+      }
+    });
+    if ($('#go').length > 0) {
+      window.location = "/";
     }
-  });
-  if ($('#go').length > 0) {
-    window.location = "/";
+    setTimeout('checkStatus()', 4000);
   }
-  setTimeout('updateMsg()', 4000);
-}
-updateMsg();
+  checkStatus();
 </script>
 
 </body>

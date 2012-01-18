@@ -81,14 +81,25 @@ $(document).ready(function(){
   });
 
   $(document).keydown(function(e){
+
    if (e.keyCode == 37) {
-     if ($(currentPhoto).prev().attr('id') != 'hide') {
-      $(currentPhoto).addClass('hidden');
-      currentPhoto = "#" + $(currentPhoto).prev('.lightbox').attr('id');
-      $(currentPhoto).removeClass('hidden');
-      return false;
+    $(currentPhoto).addClass('hidden');
+    prevPhoto = $(currentPhoto).prevAll('.lightbox').first().attr('id');
+    if (!prevPhoto) {
+      prevTrip = $(currentPhoto).parent().parent().prev();
+      if (prevTrip.children('.tripPhotos').length == 0) {
+        console.log('hey');
+        closeLightbox();
+        return false;
+      }
+      prevPhoto = prevTrip.children('.tripPhotos').children('.lightbox').last().attr('id');
     }
+    currentPhoto = "#" + prevPhoto;
+    $(currentPhoto).removeClass('hidden');
+    return false;
+
    }
+
    if (e.keyCode == 39) {
      if ($(currentPhoto).next().attr('id') != 'end') {
       $(currentPhoto).addClass('hidden');

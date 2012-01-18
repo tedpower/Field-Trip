@@ -261,6 +261,7 @@ def FS_LoadPhoto(photo, currentUser):
   newPhoto.fs_venue_id = photo['venue']['id']
   if 'checkin' in photo:
     newPhoto.fs_checkin_id = photo['checkin']['id']
+    newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(photo['checkin']['createdAt'])
     userPath = ""
     if currentUser.twitter:
       userPath = currentUser.twitter
@@ -269,6 +270,8 @@ def FS_LoadPhoto(photo, currentUser):
     newPhoto.link = "https://foursquare.com/%s/checkin/%s" % (userPath, newPhoto.fs_checkin_id)
     if 'shout' in photo['checkin']:
       newPhoto.shout = photo['checkin']['shout']
+  else:
+    newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(photo['createdAt'])
   if 'address' in photo['venue']['location']:
     newPhoto.fs_address = photo['venue']['location']['address']
   if 'crossStreet' in photo['venue']['location']:
@@ -283,15 +286,15 @@ def FS_LoadPhoto(photo, currentUser):
     if len(photo['venue']['categories']) > 0:
       newPhoto.cat_id = photo['venue']['categories'][0]['id']
       newPhoto.cat_name = photo['venue']['categories'][0]['name']
-  if photo['source']['name'] == 'Instagram':
-    newPhoto.ig_pushed_to_fs = True
+  if 'source' in photo:
+    if photo['source']['name'] == 'Instagram':
+      newPhoto.ig_pushed_to_fs = True
   newPhoto.fs_lat = photo['venue']['location']['lat']
   newPhoto.fs_lng = photo['venue']['location']['lng']
   newPhoto.photo_url = photo['url']
   newPhoto.width = photo['sizes']['items'][0]['width']
   newPhoto.height = photo['sizes']['items'][0]['height']
   newPhoto.fs_300 = photo['sizes']['items'][1]['url']
-  newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(photo['createdAt'])
   return newPhoto
 
 
@@ -337,14 +340,18 @@ def IG_AddPhoto(photo):
   return newPhoto
 
 
-# probably make this a taskque
 class MergeIgFs(webapp2.RequestHandler):
   def post(self):
     key = self.request.get('key')
     currentUser = User.get_by_key_name(key)
     currentUser.all_photos = []
 
-    allPhotosKeys = currentUser.get_fs_photos.photos + currentUser.get_ig_photos.photos
+    if currentUser.get_fs_photos is not None and currentUser.get_ig_photos is not None:
+      allPhotosKeys = currentUser.get_fs_photos.photos + currentUser.get_ig_photos.photos
+    elif currentUser.get_fs_photos is None and currentUser.get_ig_photos is not None:
+      allPhotosKeys = currentUser.get_ig_photos.photos
+    elif currentUser.get_fs_photos is not None and currentUser.get_ig_photos is None:
+      allPhotosKeys = currentUser.get_fs_photos.photos
     allPhotos = []
     for key in allPhotosKeys:
       allPhotos.append(Photo.get_by_key_name(key))
@@ -392,6 +399,8 @@ class FindTrips(webapp2.RequestHandler):
     currentUser.complete_stage = 4
     currentUser.put()
     # logging.info('wop wop!')
+
+    taskqueue.add(url='/update/friends', params={'key': currentUser.key().name()})
 
 
 # iterates through all checkins from the user
@@ -759,14 +768,18 @@ class LoadingStage(webapp2.RequestHandler):
           logging.info('not ready')
           self.response.out.write('Loading all your photos...')
         else:
-          logging.info('ready')
+          logging.info('loading trips')
           currentUser.complete_stage = 3
           currentUser.put()
           taskqueue.add(url='/merge', params={'key': currentUser.key().name()})
           self.response.out.write('Merging your photos into trips (this could take a minute) ...')
       elif currentUser.complete_stage == 3:
+        logging.info('loading trips')
         self.response.out.write('Merging your photos into trips (this could take a minute) ...')
       elif currentUser.complete_stage == 4:
+        logging.info('finding friends')
+        self.response.out.write('Finding your friends')
+      elif currentUser.complete_stage == 5:
         self.response.out.write('<div id="go"></div>')
 
 

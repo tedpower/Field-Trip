@@ -31,11 +31,17 @@ class User(db.Model):
 
     @property
     def get_fs_photos(self):
-        return PhotoIndex.get_by_key_name(self.fs_photos)
+        if self.fs_photos:
+            return PhotoIndex.get_by_key_name(self.fs_photos)
+        else:
+            return None
 
     @property
     def get_ig_photos(self):
-        return PhotoIndex.get_by_key_name(self.ig_photos)
+        if self.ig_photos:
+            return PhotoIndex.get_by_key_name(self.ig_photos)
+        else:
+            return None
 
     @property
     def get_all_trips(self):
@@ -74,10 +80,6 @@ class Photo(db.Model):
     hearted = db.StringListProperty()
     hidden = db.BooleanProperty(default=False)
 
-class IG_Photo(db.Model):
-    photo_url = db.StringProperty()
-    ig_createdAt = db.DateTimeProperty()
-
 class Trip(db.Model):
     # key is the checkin id of the first checkin
     key_id = db.StringProperty()
@@ -92,24 +94,32 @@ class Trip(db.Model):
     @property
     def get_all_photos(self):
         listOfPhotos = []
+        thisUser = User.get_by_key_name(self.user_id)
         for photoKey in self.photos:
-            listOfPhotos.append(Photo.get_by_key_name(photoKey))
+            thisPhoto = Photo.get_by_key_name(photoKey)
+            if (not thisPhoto.ig_pushed_to_fs) or (thisUser.ig_id == None):
+                listOfPhotos.append(thisPhoto)
         if self.home is False and self.ongoing is False:
             listOfPhotos.reverse()
         return listOfPhotos
 
     @property
     def get_photos_mini(self):
-        maxPhotos = 15
-        totalPhotos = len(self.photos)
-        remainingPhotos = totalPhotos - maxPhotos
+        maxPhotos = 16
+        thisUser = User.get_by_key_name(self.user_id)
+        totalPhotos = 0
         listOfPhotos = []
         for photoKey in self.photos:
-            listOfPhotos.append(Photo.get_by_key_name(photoKey))
-            if len(listOfPhotos) > 15:
-                break
+            thisPhoto = Photo.get_by_key_name(photoKey)
+            if (not thisPhoto.ig_pushed_to_fs) or (thisUser.ig_id == None):
+                if len(listOfPhotos) <= maxPhotos:
+                    listOfPhotos.append(thisPhoto)
+                totalPhotos += 1
+
         if self.home is False and self.ongoing is False:
             listOfPhotos.reverse()
+
+        remainingPhotos = totalPhotos - maxPhotos
 
         tripWidth = None
         if totalPhotos == 1:
@@ -130,6 +140,9 @@ class Trip(db.Model):
             tripWidth = 738
         elif totalPhotos > 15:
             tripWidth = 820
+
+        if remainingPhotos > 1:
+            listOfPhotos.pop()
 
         return (listOfPhotos, remainingPhotos, tripWidth)
 

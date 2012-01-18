@@ -5,6 +5,7 @@ import collections
 import webapp2
 from operator import itemgetter, attrgetter
 from google.appengine.api import urlfetch
+from google.appengine.api import taskqueue
 from django.utils import simplejson
 import main
 from auth import *
@@ -107,9 +108,7 @@ class UpdateAllPhotos(webapp2.RequestHandler):
 
 class UpdateAllFriends(webapp2.RequestHandler):
   def get(self):
-
     allUsers = User.all()
-
     # First make a list of all fb ids and fs ids in the system
     FS_userKeys = []
     FB_userKeys = []
@@ -173,6 +172,61 @@ class UpdateAllFriends(webapp2.RequestHandler):
       user.all_friends = overlap
       user.put()
 
+  def post(self):
+    key = self.request.get('key')
+    currentUser = User.get_by_key_name(key)
+
+    allUsers = User.all()
+    FS_userKeys = []
+    FB_userKeys = []
+    for user in allUsers:
+      if user.fs_id is not None:
+        FS_userKeys.append(user.fs_id)
+      if user.fb_id is not None:
+        FB_userKeys.append(user.fb_id)
+
+    overlap = []
+    if currentUser.fs_token is not None:
+
+      # first update the fs friends
+      fs_friends = FS_friendPull(currentUser, [], 0)
+
+      # find overlaps between all friends and friends on field trip
+      a_multiset = collections.Counter(FS_userKeys)
+      b_multiset = collections.Counter(fs_friends)
+      intersect = list((a_multiset & b_multiset).elements())
+      logging.info(intersect)
+
+      for friendKey in intersect:
+        query = db.Query(currentUser)
+        query.filter('fs_id =', friendKey)
+        results = query.fetch(limit=1)
+        if len(results) > 0:
+          friend = results[0]
+          overlap.append(friend.key().name())
+
+    if currentUser.fb_token is not None:
+
+      # update fb friends
+      fb_friends = FB_friendPull(currentUser)
+
+      # find overlaps between all friends and friends on field trip
+      a_multiset = collections.Counter(FB_userKeys)
+      b_multiset = collections.Counter(fb_friends)
+      intersect = list((a_multiset & b_multiset).elements())
+
+      for friendKey in intersect:
+        query = db.Query(User)
+        query.filter('fb_id =', friendKey)
+        results = query.fetch(limit=1)
+        if len(results) > 0:
+          friend = results[0]
+          overlap.append(friend.key().name())
+
+    overlap = list(set(overlap))
+    currentUser.all_friends = overlap
+    currentUser.put()
+    taskqueue.add(url='/update/friendtrips', params={'key': currentUser.key().name()})
 
 class UpdateFriendTrips(webapp2.RequestHandler):
   def get(self):
@@ -201,6 +255,36 @@ class UpdateFriendTrips(webapp2.RequestHandler):
         orderedKeys.append(tripTuple[0])
       user.friends_trips = orderedKeys
       user.put()
+
+
+  def post(self):
+    key = self.request.get('key')
+    currentUser = User.get_by_key_name(key)
+    if len(currentUser.all_friends) > 0:
+      allTripsList = [];
+      for friendKey in currentUser.all_friends:
+        friend = User.get_by_key_name(friendKey)
+        for tripKey in friend.trips:
+          trip = Trip.get_by_key_name(tripKey)
+          if trip.photos:
+            latestPhoto = Photo.get_by_key_name(trip.photos[0])
+            allTripsList.append((tripKey, latestPhoto.fs_createdAt))
+
+      for tripKey in currentUser.trips:
+        trip = Trip.get_by_key_name(tripKey)
+        if trip.photos:
+          latestPhoto = Photo.get_by_key_name(trip.photos[0])
+          allTripsList.append((tripKey, latestPhoto.fs_createdAt))
+
+      # sort them chronologically... this needs to handle ongoing trips
+      allTripsList = sorted(allTripsList, key=itemgetter(1), reverse=True)
+
+      orderedKeys = []
+      for tripTuple in allTripsList:
+        orderedKeys.append(tripTuple[0])
+      currentUser.friends_trips = orderedKeys
+    currentUser.complete_stage = 5
+    currentUser.put()
 
 
 def FS_friendPull(currentUser, fs_friends, indx):

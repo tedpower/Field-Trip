@@ -1,11 +1,15 @@
 <div class="friendTrip">
-  <!-- <img src="{{ trip.get_mini_user.fs_profilePic }}"> -->
-  <p>{{ trip.get_mini_user.firstName }}</p>
-  {% if trip.home %}
-    <p>Home in {{ trip.title }}</p>
-  {% else %}
-    <p>{{ trip.title }}</p>
-  {% endif %}
+  <div class="tripHead clearfix">
+    <img src="{{ trip.get_mini_user.fs_profilePic }}" class="miniprofile">
+    <div class="tripTitle">
+      <h2>{{ trip.get_mini_user.firstName }}</h2>
+      {% if trip.home %}
+        <div class="tripName">Home in {{ trip.title }}</div>
+      {% else %}
+        <div class="tripName">{{ trip.title }}</div>
+      {% endif %}
+    </div>
+  </div>
   <div class="tripPhotos clearfix" style="width:{{ trip.get_photos_mini.2 }}px;" id="trip{{ next|add:"-1" }}">
   {% for photo in trip.get_photos_mini.0 %}
     <img src="{{ photo.fs_300 }}" class="friendPhoto" id="{{photo.key_id}}">
@@ -35,8 +39,8 @@
     </div>
 
   {% endfor %}
-  {% if trip.get_photos_mini.1 > 0 %}
-    <p>+ {{ trip.get_photos_mini.1 }}</p>
+  {% if trip.get_photos_mini.1 > 1 %}
+    <div class="moreCount">+{{ trip.get_photos_mini.1 }}</div>
   {% endif %}
   </div>
 </div>
