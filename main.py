@@ -49,6 +49,22 @@ class Index(webapp2.RequestHandler):
       pass
 
 
+class FriendPage(webapp2.RequestHandler):
+  def get(self, friend_id):
+    cookieValue = None
+    try:
+      cookieValue = self.request.cookies['FT_Cookie']
+    except KeyError:
+      logging.info('no cookie')
+    if cookieValue:
+      cookieUser = User.get_by_key_name(cookieValue)
+
+      requestPath = self.request.path
+      logging.info(requestPath)
+      path = os.path.join(os.path.dirname(__file__), 'templates/you.html')
+      self.response.out.write(template.render(path, {'user' : cookieUser, 'path' : requestPath}))
+
+
 class Settings(webapp2.RequestHandler):
   def get(self):
     cookieValue = None
@@ -105,6 +121,7 @@ class FS_OAuthRequestValid(webapp2.RequestHandler):
       else:
         u = uuid.uuid4()
         currentUser = User(key_name=str(u))
+        currentUser.key_id = str(u)
 
       self_response_url = "https://api.foursquare.com/v2/users/self?oauth_token=%s" % (access_token['access_token'])
       self_response_json = urlfetch.fetch(self_response_url, validate_certificate=False)
@@ -166,6 +183,7 @@ class IG_OAuthRequestValid(webapp2.RequestHandler):
       else:
         u = uuid.uuid4()
         currentUser = User(key_name=str(u))
+        currentUser.key_id = str(u)
 
       currentUser.ig_token = access_token['access_token']
       currentUser.ig_id = str(access_token['user']['id'])
@@ -913,5 +931,6 @@ app = webapp2.WSGIApplication([('/', Index,),
                                ('/signup', SignUp),
                                ('/networks', Networks),
                                ('/loadingStage', LoadingStage),
+                               ('/friends/(.*)', FriendPage),
                                ('/logout', Logout)],
                               debug=True)

@@ -3,7 +3,7 @@
     <div class="tripHead clearfix">
       <img src="{{ trip.get_mini_user.fs_profilePic }}" class="miniprofile">
       <div class="tripTitle">
-        <h2>{{ trip.get_mini_user.firstName }}</h2>
+        <h2><a href="#">{{ trip.get_mini_user.firstName }}</a></h2>
         {% if trip.home %}
           <div class="tripName">Home in {{ trip.title }}</div>
         {% else %}

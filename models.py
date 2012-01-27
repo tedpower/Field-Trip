@@ -2,6 +2,7 @@ from google.appengine.ext import db
 import datetime
 
 class User(db.Model):
+    key_id = db.StringProperty()
     fs_token = db.StringProperty()
     ig_token = db.StringProperty()
     fb_token = db.StringProperty()
