@@ -13,6 +13,7 @@ function updatePhotos() {
       }
     });
     hasRun = true;
+    $('#line').height($("#photos").height());
     currentTrip = Number(nextTrip) - 1;
     $("#trip" + currentTrip).find(".photo").click(function() {
       currentPhoto = "#l" + $(this).attr('id');

@@ -4,7 +4,8 @@ body {
 	margin: 0;
 	padding: 0;
 	text-align: center;
-	font: 13px Helvetica, sans-serif;
+	font: 13px 'Helvetica', sans-serif;
+  background-color: #F1F1F1;
 }
 
 a {
@@ -19,85 +20,56 @@ a:hover {
 
 /* Logged In Header ---------- */
 
-#header {
-	height: 54px;
-	top: 0;
-	left: 0;
-	right: 0;
-  background-color: #fff;
+#top {
+    position: absolute;
+    top: 0;
+    left: 310px;
+    margin: 30px auto;
+    z-index: 1;
+    font-weight: bold;
+    padding: 30px;
+    width: 260px;
+    background-color: #fff;
+    box-shadow: 0 2px 0 rgba(34, 25, 25, 0.09);
+    text-transform: uppercase;
+    color: #989898;
 }
 
-#headwrap {
-	width: 824px;
-	margin: 0 auto;
-	position: relative;
+#top h1 {
+  color: red;
+  margin: 0 0 10px 0;
+  letter-spacing: 4px;
 }
 
-#logo {
-	padding: 14px 0 14px 4px;
-	float: left;
+#top a {
+  color: #989898;
 }
 
-#you, #friends {
-	width: 76px;
-	display: block;
-	float: left;
-	margin: 0 12px;
+#top a.selected {
+  color: #666666;
 }
 
-#you a, #friends a {
-	line-height: 50px;
-}
-
-#you {
-	text-align: right;
-}
-
-#friends {
-	text-align: left;
-}
-
-#toggle {
-	width: 200px;
-	margin: 0 auto;
-	background: url(dot.png) no-repeat 50% 50%;
-}
-
-#toggle a {
-  color: #999999;
-}
-
-#toggle a.selected {
-  color: #333333;
+#top a:hover {
+    text-decoration: underline;
+color: #666666;
 }
 
 #menu {
-	float: right;
-	margin-right: 4px;
-	padding: 0 22px 0 0;
-	background: url(menu.png) no-repeat right 50%;
-	font-weight: bold;
-    cursor: pointer;
-    height: 50px;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2;
 }
 
 #headerprofilepic {
-	padding: 10px 8px;
-	float: right;
-}
-.profilename {
-	line-height: 50px;
-	float: right;
-}
-
-#menu:hover {
-	background-color: rgba(0,0,0,.1);
+  border: 4px solid #fff;
+  box-shadow: 0 1px 3px rgba(34,25,25,0.3);
 }
 
 #menubox {
-	position: absolute;
-	right: 0;
-	top: 50px;
+	position: fixed;
+	right: 16px;
+	top: 69px;
 	background-color: #fff;
 	margin: 0 4px 0 0;
 	width: 160px;
@@ -129,19 +101,33 @@ a:hover {
 	background-color: #CCCACA;
 }
 
-
+#line {
+    position: absolute;
+    top: 30px;
+    left: 0;
+    height: 0px;
+    width: 458px;
+    border-right: 4px solid #CCCCCC;
+    -webkit-transition: height 2s linear;
+    z-index: -1;
+}
 
 /* Logged In Body ---------- */
 
-body.loggedin {
-	min-width: 825px;
+#photoWrap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    -webkit-transform-style: preserve-3d;
+    -webkit-transition-property: -webkit-transform;
+    -webkit-transition-duration: 1.5s;
 }
 
 #photos {
-  padding: 80px 0 0 4px;
   text-align: left;
-  width: 820px;
-  margin: 0 auto;
+  width: 920px;
+  padding: 150px 0 30px 0;
 }
 
 .photo:hover {
@@ -165,12 +151,13 @@ body.loggedin {
 
 .home {
   margin: 0 4px 4px 0;
-  width: 160px;
-  height: 160px;
+  width: 197px;
+  height: 197px;
   float: left;
   -webkit-transition: all 300ms;
-  background-size: auto 160px;
+  background-size: auto 197px;
   background-repeat: no-repeat;
+  background-color: #ECEEF0;
 }
 
 .away a {
@@ -185,8 +172,15 @@ body.loggedin {
     display: block;
 }
 
+.meTrip {
+  background-color: #fff;
+  padding: 30px 26px 30px 30px;
+  margin: 30px;
+  box-shadow: 0 2px 0 rgba(34, 25, 25, 0.09);
+}
+
 .tripPhotos {
-  padding: 23px 0 36px 0;
+  padding: 30px 0 0 0;
 }
 
 .date {
@@ -196,12 +190,13 @@ body.loggedin {
     padding: 5px 0 0 0;
 }
 
-.loggedin h2 {
+.meTrip h2 {
     font-weight: bold;
     font-size: 15px;
     color: #333333;
     margin: 0;
     clear: both;
+    text-align: center;
 }
 
 #hide {
@@ -275,7 +270,11 @@ body.loggedin {
 }
 
 #loading {
-    padding-bottom: 300px;
+    background-color: #fff;
+    padding: 30px;
+    margin: 30px 30px 100px 30px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(34,25,25,0.3);
 }
 
 /* Logged Out Homepage ---------- */

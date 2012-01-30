@@ -6,6 +6,8 @@
 	<title>Field Trip</title>
     <LINK REL=StyleSheet href="/static/style.css" TYPE="text/css" MEDIA=screen>
     <link rel="icon" type="image/png" href="static/temp.png">
+    <link href='http://fonts.googleapis.com/css?family=Cousine:400,700' rel='stylesheet' type='text/css'>
+
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
     <script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?sensor=false"></script>
     <script type="text/javascript" src="/static/main.js"></script>
@@ -25,38 +27,35 @@
     </script>
 
 </head>
-<body class="loggedin">
+<body>
 
-    <div id="header">
-        <div id="headwrap">
+<div id="top">
+<h1>FIELD TRIP</h1>
+  <a href="/"
+  {% ifequal path '/' %}
+    class="selected"
+  {% endifequal %}
+  >You</a>&nbsp; · &nbsp;<a href="/friends"
+  {% ifequal path '/friends' %}
+    class="selected"
+  {% endifequal %}
+  >Friends</a>
 
-            <a href="/"><img src="static/logo.png" width="160" height="22" alt="Field Trip" id="logo"></a>
-            <div id="menu">
-                <div class="profilename">{% if user.firstName %}{{ user.firstName }}{% endif %}</div>
-                {% if user.fs_profilePic %}
-                     <img src="{{ user.fs_profilePic }}" width="30px" height="30px" id="headerprofilepic">
-                {% endif %}
-            </div>
-            <div id="toggle" class="clearfix">
-                <div id="you"><a href="/"
-                {% ifequal path '/' %}
-                  class="selected"
-                {% endifequal %}
-                >You</a></div>
-                <div id="friends"><a href="/friends"
-                {% ifequal path '/friends' %}
-                  class="selected"
-                {% endifequal %}
-                >Friends</a></div>
-            </div>
+</div>
 
-            <ul id="menubox">
-                <li><a href="/settings">Settings</a></li>
-                <li><a href="#">About</a></li>
-                <li><a href="/logout" id="logout">Log out</a></li>
-            </ul>
-        </div>
-    </div>
+<div id="line"></div>
+
+<div id="menu">
+  {% if user.fs_profilePic %}
+    <img src="{{ user.fs_profilePic }}" width="40px" height="40px" id="headerprofilepic">
+  {% endif %}
+</div>
+
+<ul id="menubox">
+  <li><a href="/settings">Settings</a></li>
+  <li><a href="#">About</a></li>
+  <li><a href="/logout" id="logout">Log out</a></li>
+</ul>
 
 {% block bodycontent %}
      Replace this
