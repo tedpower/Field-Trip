@@ -23,12 +23,12 @@ a:hover {
 #top {
     position: absolute;
     top: 0;
-    left: 310px;
+    left: 261px;
     margin: 30px auto;
     z-index: 1;
     font-weight: bold;
     padding: 30px;
-    width: 260px;
+    width: 338px;
     background-color: #fff;
     box-shadow: 0 2px 0 rgba(34, 25, 25, 0.09);
     text-transform: uppercase;
@@ -112,6 +112,15 @@ color: #666666;
     z-index: -1;
 }
 
+#bgHack {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #F1F1F1;
+    z-index: -2;
+}
+
 /* Logged In Body ---------- */
 
 #photoWrap {
@@ -192,7 +201,7 @@ color: #666666;
 
 .meTrip h2 {
     font-weight: bold;
-    font-size: 15px;
+    font-size: 16px;
     color: #333333;
     margin: 0;
     clear: both;

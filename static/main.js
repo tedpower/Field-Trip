@@ -13,7 +13,6 @@ function updatePhotos() {
       }
     });
     hasRun = true;
-    $('#line').height($("#photos").height());
     currentTrip = Number(nextTrip) - 1;
     $("#trip" + currentTrip).find(".photo").click(function() {
       currentPhoto = "#l" + $(this).attr('id');
@@ -27,6 +26,8 @@ function updatePhotos() {
       $('#hide').addClass('invisible');
       $('body').removeClass('theaterMode');
     });
+    $('#line').height($("#photos").height());
+    $('#bgHack').height($("#photos").height());
   }
 }
 

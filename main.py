@@ -409,7 +409,7 @@ class FindTrips(webapp2.RequestHandler):
     currentUser.trips = findTripRanges(currentUser, allPhotos, allDatePts)
 
     # Loop through and name the trips
-    nameTrips(currentUser.trips, currentUser.homeCity)
+    nameTrips(currentUser.trips, currentUser.homeCity, currentUser.gHomeState, currentUser.gHomeCountry)
 
     # if there are any airports adjacent to a trip, add them to that trip
     airportJiggle(currentUser.trips)
@@ -549,7 +549,7 @@ def findTripRanges(currentUser, photos, datePts):
   return tripList
 
 
-def nameTrips(trips, homeTown):
+def nameTrips(trips, homeTown, homeState, homeCountry):
   for trip in trips:
     thisTrip = Trip.get_by_key_name(trip)
     if thisTrip.home == False:
@@ -613,13 +613,39 @@ def nameTrips(trips, homeTown):
       if len(countries) > 1:
         countries.reverse()
         thisTrip.title = nameify(thisTrip, countries)
-      elif len(cities) > 0:
-        citystate.reverse()
-        thisTrip.title = nameify(thisTrip, citystate)
-      elif len(states) > 0:
+        thisTrip.put()
+      elif len(states) > 1:
         states.reverse()
         thisTrip.title = nameify(thisTrip, states)
-      thisTrip.put()
+        thisTrip.put()
+      elif len(cities) > 1:
+        # check if all the photos have the same state
+        if Photo.get_by_key_name(thisTrip.photos[0]).fs_state:
+          firstState = Photo.get_by_key_name(thisTrip.photos[0]).fs_state
+          allGood = True
+          for photo in thisTrip.photos:
+            thisPhoto = Photo.get_by_key_name(photo)
+            if firstState != thisPhoto.fs_state:
+              allGood = False
+          if allGood == True:
+            if firstState != homeState:
+              thisTrip.title = firstState
+              thisTrip.put()
+            else:
+              citystate.reverse()
+              thisTrip.title = nameify(thisTrip, citystate)
+              thisTrip.put()
+          else:
+            citystate.reverse()
+            thisTrip.title = nameify(thisTrip, citystate)
+            thisTrip.put()
+        else:
+          citystate.reverse()
+          thisTrip.title = nameify(thisTrip, citystate)
+          thisTrip.put()
+      elif len(cities) == 1:
+        thisTrip.title = citystate[0]
+        thisTrip.put()
 
     else:
       thisTrip.title = homeTown
@@ -832,6 +858,27 @@ class SignUp(webapp2.RequestHandler):
           currentUser.homeCityLng = google_response['results'][0]['geometry']['location']['lng']
         if not currentUser.homeCityLat:
           errorList.append("Woops! Couldn't find that city")
+
+        subCity = None
+        google_url = "http://maps.googleapis.com/maps/api/geocode/json?latlng=%s,%s&sensor=false" % (currentUser.homeCityLat, currentUser.homeCityLng)
+        google_json = urlfetch.fetch(google_url, validate_certificate=False)
+        google_response = simplejson.loads(google_json.content)
+        if len(google_response['results']) > 0:
+          firstGeocode = google_response['results'][0]
+          for component in firstGeocode['address_components']:
+            for gType in component['types']:
+              if gType == 'administrative_area_level_1':
+                currentUser.gHomeState = component['long_name']
+                currentUser.gHomeStateShort = component['short_name']
+              if gType == 'locality':
+                currentUser.gHomeCity = component['long_name']
+              if gType == 'sublocality':
+                subCity = component['long_name']
+              if gType == 'country':
+                currentUser.gHomeCountry = component['long_name']
+            if currentUser.gHomeCity is None and subCity is not None:
+              currentUser.gHomeCity = subCity
+
       else:
         errorList.append("Fist name, email, and home city are required")
 

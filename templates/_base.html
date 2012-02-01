@@ -44,6 +44,7 @@
 </div>
 
 <div id="line"></div>
+<div id="bgHack"></div>
 
 <div id="menu">
   {% if user.fs_profilePic %}
@@ -57,9 +58,11 @@
   <li><a href="/logout" id="logout">Log out</a></li>
 </ul>
 
+<div id="photoWrap">
 {% block bodycontent %}
      Replace this
 {% endblock %}
+</div>
 
 </body>
 </html>
