@@ -26,9 +26,12 @@ function updatePhotos() {
       $('#hide').addClass('invisible');
       $('body').removeClass('theaterMode');
     });
-    $('#line').height($("#photos").height());
-    $('#bgHack').height($("#photos").height());
   }
+}
+
+function updateLine() {
+  $('#line').height($("#photos").height() - 150);
+  $('#bgHack').height($("#photos").height());
 }
 
 function updateFriendPhotos() {
@@ -68,6 +71,21 @@ function closeLightbox() {
 }
 
 $(document).ready(function(){
+
+  $('#friends').click(function() {
+    $('#friends').addClass('selected');
+    $('#you').removeClass('selected');
+    $('#photoWrap').addClass('flipped');
+    $('#line').height(100);
+    return false;
+  });
+  $('#you').click(function() {
+    $('#you').addClass('selected');
+    $('#friends').removeClass('selected');
+    $('#photoWrap').removeClass('flipped');
+    updateLine();
+    return false;
+  });
 
   $('html').click(function() {
     $('#menubox').hide();

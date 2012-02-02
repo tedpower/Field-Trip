@@ -63,7 +63,7 @@ color: #666666;
 
 #headerprofilepic {
   border: 4px solid #fff;
-  box-shadow: 0 1px 3px rgba(34,25,25,0.3);
+    box-shadow: 0 2px 0 rgba(34, 25, 25, 0.09);
 }
 
 #menubox {
@@ -127,10 +127,40 @@ color: #666666;
     position: absolute;
     top: 0;
     left: 0;
-    right: 0;
+    width: 920px;
     -webkit-transform-style: preserve-3d;
+    -moz-transform-style: preserve-3d;
+    transform-style: preserve-3d;
     -webkit-transition-property: -webkit-transform;
+    -moz-transition-property: -moz-transform;
+    transition-property: transform;
     -webkit-transition-duration: 1.5s;
+    -moz-transition-duration: 1.5s;
+    transition-duration: 1.5s;
+
+}
+
+.face {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    -webkit-backface-visibility: hidden;
+    -moz-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+#back {
+    -webkit-transform: rotateY(180deg);
+    -moz-transform: rotateY(180deg);
+    transform: rotateY(180deg);
+
+}
+
+.flipped {
+    -webkit-transform: rotateY(180deg);
+    -moz-transform: rotateY(180deg);
+    transform: rotateY(180deg);
 }
 
 #photos {
@@ -283,7 +313,7 @@ color: #666666;
     padding: 30px;
     margin: 30px 30px 100px 30px;
     text-align: center;
-    box-shadow: 0 1px 3px rgba(34,25,25,0.3);
+    box-shadow: 0 2px 0 rgba(34, 25, 25, 0.09);
 }
 
 /* Logged Out Homepage ---------- */
