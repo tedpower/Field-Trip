@@ -89,7 +89,7 @@ class UpdateAllPhotos(webapp2.RequestHandler):
         tripDiff = main.findTripRanges(user, photoDiff, datePtsDiff)
 
         # Loop through and name the trips
-        main.nameTrips(tripDiff, user.homeCity)
+        main.nameTrips(tripDiff, user.homeCity, user.gHomeState, user.gHomeCountry)
 
         # if there are any airports adjacent to a trip, add them to that trip
         main.airportJiggle(tripDiff)

@@ -53,21 +53,5 @@
 {% endif %}
 <div id="ajax">
   <div id="loading" style="display:none">Loading...</div>
-  <div id="next" style="display:none">{{ next }}</div>
-  <script>
-    hasRun = false;
-    $(window).scroll(function () {
-      if (!hasRun) {
-        updatePhotos();
-      }
-    });
 
-    if ($(window).scrollTop() >= $("#photos").height() - $(window).height() - 1000) {
-      updatePhotos();
-    }
-
-    $(document).ready(function () {
-      updateLine();
-    });
-  </script>
 </div>

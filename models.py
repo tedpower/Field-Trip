@@ -114,50 +114,54 @@ class Trip(db.Model):
 
     @property
     def get_photos_mini(self):
-        maxPhotos = 16
         thisUser = User.get_by_key_name(self.user_id)
-        totalPhotos = 0
-        listOfPhotos = []
-        for photoKey in self.photos:
-            thisPhoto = Photo.get_by_key_name(photoKey)
-            if (not thisPhoto.ig_pushed_to_fs) or (thisUser.ig_id == None):
-                if thisPhoto.hidden is False:
-                    if len(listOfPhotos) <= maxPhotos:
-                        listOfPhotos.append(thisPhoto)
-                    totalPhotos += 1
+        thisPhoto = Photo.get_by_key_name(self.photos[0])
+        return thisPhoto
 
-        if self.home is False and self.ongoing is False:
-            listOfPhotos.reverse()
+        # maxPhotos = 5
+        # thisUser = User.get_by_key_name(self.user_id)
+        # totalPhotos = 0
+        # listOfPhotos = []
+        # for photoKey in self.photos:
+        #     thisPhoto = Photo.get_by_key_name(photoKey)
+        #     if (not thisPhoto.ig_pushed_to_fs) or (thisUser.ig_id == None):
+        #         if thisPhoto.hidden is False:
+        #             if len(listOfPhotos) <= maxPhotos:
+        #                 listOfPhotos.append(thisPhoto)
+        #             totalPhotos += 1
 
-        remainingPhotos = totalPhotos - maxPhotos
+        # if self.home is False and self.ongoing is False:
+        #     listOfPhotos.reverse()
 
-        tripWidth = None
-        if totalPhotos == 1:
-            tripWidth = 164
-        elif 1 < totalPhotos < 4:
-            tripWidth = 246
-        elif 3 < totalPhotos < 6:
-            tripWidth = 328
-        elif 5 < totalPhotos < 8:
-            tripWidth = 410
-        elif 7 < totalPhotos < 10:
-            tripWidth = 492
-        elif 9 < totalPhotos < 12:
-            tripWidth = 574
-        elif 11 < totalPhotos < 14:
-            tripWidth = 656
-        elif 13 < totalPhotos < 16:
-            tripWidth = 738
-        elif totalPhotos > 15:
-            tripWidth = 820
+        # remainingPhotos = totalPhotos - maxPhotos
 
-        if remainingPhotos > 1:
-            listOfPhotos.pop()
+        # tripWidth = None
+        # if totalPhotos == 1:
+        #     tripWidth = 164
+        # elif 1 < totalPhotos < 4:
+        #     tripWidth = 246
+        # elif 3 < totalPhotos < 6:
+        #     tripWidth = 328
+        # elif 5 < totalPhotos < 8:
+        #     tripWidth = 410
+        # elif 7 < totalPhotos < 10:
+        #     tripWidth = 492
+        # elif 9 < totalPhotos < 12:
+        #     tripWidth = 574
+        # elif 11 < totalPhotos < 14:
+        #     tripWidth = 656
+        # elif 13 < totalPhotos < 16:
+        #     tripWidth = 738
+        # elif totalPhotos > 15:
+        #     tripWidth = 820
 
-        if totalPhotos == 0:
-            return False
-        else:
-            return (listOfPhotos, remainingPhotos, tripWidth)
+        # if remainingPhotos > 1:
+        #     listOfPhotos.pop()
+
+        # if totalPhotos == 0:
+        #     return False
+        # else:
+        #     return (listOfPhotos, remainingPhotos, tripWidth)
 
     @property
     def get_mini_user(self):
