@@ -718,6 +718,8 @@ class TripLoad(webapp2.RequestHandler):
         logging.info(thisTrip.key_id)
         path = os.path.join(os.path.dirname(__file__), 'templates/tripLoad.html')
         self.response.out.write(template.render(path, {'trip' : thisTrip, 'next' : startAt + 1}))
+      else:
+        self.response.out.write('<script>youDone = true;</script>')
 
 
 class FriendTripLoad(webapp2.RequestHandler):
@@ -738,8 +740,10 @@ class FriendTripLoad(webapp2.RequestHandler):
         logging.info(thisTrip.title)
         logging.info(thisTrip.key_id)
         path = os.path.join(os.path.dirname(__file__), 'templates/friendTripLoad.html')
-        self.response.out.write(template.render(path, {'trip' : thisTrip, 'next' : startAt + 1}))
-
+        currentTime = datetime.datetime.now()
+        self.response.out.write(template.render(path, {'trip' : thisTrip, 'next' : startAt + 1, 'currentTime' : currentTime}))
+      else:
+        self.response.out.write('<script>friendDone = true;</script>')
 
 class HidePhoto(webapp2.RequestHandler):
   def get(self):

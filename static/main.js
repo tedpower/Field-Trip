@@ -2,10 +2,21 @@ var currentPhoto = null;
 var hasRun = false;
 var friendsTab = false;
 var youNext = 0;
+var youDone = false;
+var friendNext = 0;
+var friendDone = false;
 
 $(document).ready(function(){
 
-  console.log('test');
+  if (friendsTab) {
+    if (!hasRun) {
+      updateFriendPhotos();
+    }
+  } else {
+    if (!hasRun) {
+      updatePhotos();
+    }
+  }
 
   $(window).scroll(function () {
     if (friendsTab) {
@@ -18,16 +29,6 @@ $(document).ready(function(){
       }
     }
   });
-
-  if (friendsTab) {
-    if ($(window).scrollTop() >= $("#friendPhotos").height() - $(window).height() - 1000) {
-      updatePhotos();
-    }
-  } else {
-    if ($(window).scrollTop() >= $("#photos").height() - $(window).height() - 1000) {
-      updatePhotos();
-    }
-  }
 
   $('#friends').click(function() {
     $('#friends').addClass('selected');
@@ -107,47 +108,70 @@ $(document).keydown(function(e){
 
 function updatePhotos() {
   if ($(window).scrollTop() >= $("#photos").height() - $(window).height() - 1000) {
-    $("#loading").toggle();
-    updateLine();
-    $.ajax({
-      url: "/tripLoad?startAt="  + youNext,
-      cache: false,
-      success: function(html){
-        $("#ajax").replaceWith(html);
-        hasRun = false;
-        youNext = youNext + 1;
-        updateLine();
-      }
-    });
     hasRun = true;
-    currentTrip = youNext - 1;
-    $("#trip" + currentTrip).find(".photo").click(function() {
-      currentPhoto = "#l" + $(this).attr('id');
-      $(currentPhoto).removeClass('hidden');
-      $('#hide').removeClass('invisible');
-      $('body').addClass('theaterMode');
-    });
-    $("#trip" + currentTrip).find(".lightbox").click(function() {
-      $(this).addClass('hidden');
-      currentPhoto = null;
-      $('#hide').addClass('invisible');
-      $('body').removeClass('theaterMode');
-    });
+    if (!youDone) {
+      $("#loading").toggle();
+      updateLine();
+      $.ajax({
+        url: "/tripLoad?startAt="  + youNext,
+        cache: false,
+        success: function(html){
+          $("#ajax").append(html);
+          hasRun = false;
+          youNext = youNext + 1;
+          updateLine();
+          $("#loading").toggle();
+          if ($(window).scrollTop() >= $("#photos").height() - $(window).height() - 1000) {
+            updatePhotos();
+          } else {
+            if (friendNext < 2) {
+              updateFriendPhotos();
+            }
+          }
+        }
+      });
+      currentTrip = youNext - 1;
+      $("#trip" + currentTrip).find(".photo").click(function() {
+        currentPhoto = "#l" + $(this).attr('id');
+        $(currentPhoto).removeClass('hidden');
+        $('#hide').removeClass('invisible');
+        $('body').addClass('theaterMode');
+      });
+      $("#trip" + currentTrip).find(".lightbox").click(function() {
+        $(this).addClass('hidden');
+        currentPhoto = null;
+        $('#hide').addClass('invisible');
+        $('body').removeClass('theaterMode');
+      });
+    }
   }
 }
 
 function updateFriendPhotos() {
   if ($(window).scrollTop() >= $("#friendPhotos").height() - $(window).height() - 1000) {
-    $("#friendLoading").toggle();
-    var nextTrip = $('#friendNext').text();
-    $.ajax({
-      url: "/friendTripLoad?startAt="  + nextTrip,
-      cache: false,
-      success: function(html){
-        $("#friendAjax").replaceWith(html);
-      }
-    });
     hasRun = true;
+    if (!friendDone) {
+      // $("#friendLoading").toggle();
+      updateLine();
+      $.ajax({
+        url: "/friendTripLoad?startAt="  + friendNext,
+        cache: false,
+        success: function(html){
+          if ($("#rightCol").height() < $("#leftCol").height()) {
+            $("#rightCol").append(html);
+          } else {
+            $("#leftCol").append(html);
+          }
+          hasRun = false;
+          friendNext = friendNext + 1;
+          updateLine();
+          // $("#friendLoading").toggle();
+          if ($(window).scrollTop() >= $("#friendPhotos").height() - $(window).height() - 1000) {
+            updateFriendPhotos();
+          }
+        }
+      });
+    }
   }
 }
 

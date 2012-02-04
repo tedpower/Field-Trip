@@ -4,44 +4,51 @@
       <img src="{{ trip.get_mini_user.fs_profilePic }}" class="miniprofile">
       <div class="tripTitle">
         {% if trip.home %}
-          <h2 style="line-height:34px;"><a href="#">{{ trip.get_mini_user.firstName }}</a>
+          <h2 style="line-height:34px;">{{ trip.get_mini_user.firstName }}
           <span class="deemph">at home in {{ trip.title }}</span></h2>
         {% else %}
-          <h2><a href="#">{{ trip.get_mini_user.firstName }}</a>
-          <span class="deemph">in {{ trip.title }}</span></h2>
+          <h2>{{ trip.get_mini_user.firstName }}
+          <span class="deemph">in</span> {{ trip.title }}</h2>
           <div class="tripName">
-            {% if trip.end_date %}
-              {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
-                {{ trip.start_date|date:"M j, Y" }}
+            {% ifequal currentTime|date:"Y" trip.start_date|date:"Y" %}
+              {% if trip.end_date %}
+                {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
+                  {{ trip.start_date|date:"M j" }}
+                {% else %}
+                  {% ifequal trip.start_date|date:"M" trip.end_date|date:"M" %}
+                    {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"j" }}
+                  {% else %}
+                    {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"M j" }}
+                  {% endifequal %}
+                {% endifequal %}
               {% else %}
-                {{ trip.start_date|date:"M j, Y" }} - {{ trip.end_date|date:"M j, Y" }}
-              {% endifequal %}
+                Away since {{ trip.start_date|date:"M j" }}
+              {% endif %}
             {% else %}
-              {{ trip.start_date|date:"M j, Y" }} - today
-            {% endif %}
+              {% if trip.end_date %}
+                {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
+                  {{ trip.start_date|date:"M j, Y" }}
+                {% else %}
+                  {% ifequal trip.start_date|date:"Y" trip.end_date|date:"Y" %}
+                    {% ifequal trip.start_date|date:"M" trip.end_date|date:"M" %}
+                      {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"j, Y" }}
+                    {% else %}
+                      {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"M j, Y" }}
+                    {% endifequal %}
+                  {% else %}
+                    {{ trip.start_date|date:"M j, Y" }} - {{ trip.end_date|date:"M j, Y" }}
+                  {% endifequal %}
+                {% endifequal %}
+              {% else %}
+                Away since {{ trip.start_date|date:"M j, Y" }}
+              {% endif %}
+            {% endifequal %}
           </div>
         {% endif %}
       </div>
     </div>
     <div class="clearfix" id="trip{{ next|add:"-1" }}">
       <img src="{{ trip.get_photos_mini.fs_300 }}" class="friendPhoto" id="{{trip.get_photos_mini.key_id}}">
-
     </div>
   </div>
 {% endif %}
-
-<div id="friendAjax">
-  <div id="friendLoading" style="display:none">Loading...</div>
-  <div id="friendNext" style="display:none">{{ next }}</div>
-  <script>
-    hasRun = false;
-    $(window).scroll(function () {
-      if (!hasRun) {
-        updateFriendPhotos();
-      }
-    });
-    if ($(window).scrollTop() >= $("#friendPhotos").height() - $(window).height() - 1000) {
-      updateFriendPhotos();
-    }
-  </script>
-</div>
