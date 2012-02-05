@@ -1,7 +1,7 @@
 /* Base ---------- */
 
 html {
-    background-color: #F7F5F5;
+    background-color: #F1F1F1;
 }
 
 body {
@@ -118,7 +118,7 @@ color: #666666;
     top: 0;
     left: 0;
     right: 0;
-    background-color: #F7F5F5;
+    background-color: #F1F1F1;
     z-index: -2;
 }
 

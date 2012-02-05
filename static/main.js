@@ -1,32 +1,25 @@
 var currentPhoto = null;
-var hasRun = false;
 var friendsTab = false;
 var youNext = 0;
 var youDone = false;
+var hasRun = false;
 var friendNext = 0;
 var friendDone = false;
+var friendHasRun = false;
 
 $(document).ready(function(){
 
   if (friendsTab) {
-    if (!hasRun) {
-      updateFriendPhotos();
-    }
+    updateFriendPhotos();
   } else {
-    if (!hasRun) {
-      updatePhotos();
-    }
+    updatePhotos();
   }
 
   $(window).scroll(function () {
     if (friendsTab) {
-      if (!hasRun) {
-        updateFriendPhotos();
-      }
+      updateFriendPhotos();
     } else {
-      if (!hasRun) {
-        updatePhotos();
-      }
+      updatePhotos();
     }
   });
 
@@ -107,70 +100,78 @@ $(document).keydown(function(e){
 });
 
 function updatePhotos() {
-  if ($(window).scrollTop() >= $("#photos").height() - $(window).height() - 1000) {
-    hasRun = true;
-    if (!youDone) {
-      $("#loading").toggle();
-      updateLine();
-      $.ajax({
-        url: "/tripLoad?startAt="  + youNext,
-        cache: false,
-        success: function(html){
-          $("#ajax").append(html);
-          hasRun = false;
-          youNext = youNext + 1;
-          updateLine();
-          $("#loading").toggle();
-          if ($(window).scrollTop() >= $("#photos").height() - $(window).height() - 1000) {
-            updatePhotos();
-          } else {
-            if (friendNext < 2) {
-              updateFriendPhotos();
+  if (!hasRun) {
+    if ($(window).scrollTop() >= $("#photos").height() - $(window).height() - 1000) {
+      hasRun = true;
+      if (!youDone) {
+        $("#loading").toggle();
+        updateLine();
+        $.ajax({
+          url: "/tripLoad?startAt="  + youNext,
+          cache: false,
+          success: function(html){
+            $("#ajax").append(html);
+            hasRun = false;
+            youNext = youNext + 1;
+            updateLine();
+            $("#loading").toggle();
+            if ($(window).scrollTop() >= $("#photos").height() - $(window).height() - 1000) {
+              updatePhotos();
+            } else {
+              if (friendNext < 2) {
+                updateFriendPhotos();
+              }
             }
           }
-        }
-      });
-      currentTrip = youNext - 1;
-      $("#trip" + currentTrip).find(".photo").click(function() {
-        currentPhoto = "#l" + $(this).attr('id');
-        $(currentPhoto).removeClass('hidden');
-        $('#hide').removeClass('invisible');
-        $('body').addClass('theaterMode');
-      });
-      $("#trip" + currentTrip).find(".lightbox").click(function() {
-        $(this).addClass('hidden');
-        currentPhoto = null;
-        $('#hide').addClass('invisible');
-        $('body').removeClass('theaterMode');
-      });
+        });
+        currentTrip = youNext - 1;
+        $("#trip" + currentTrip).find(".photo").click(function() {
+          currentPhoto = "#l" + $(this).attr('id');
+          $(currentPhoto).removeClass('hidden');
+          $('#hide').removeClass('invisible');
+          $('body').addClass('theaterMode');
+        });
+        $("#trip" + currentTrip).find(".lightbox").click(function() {
+          $(this).addClass('hidden');
+          currentPhoto = null;
+          $('#hide').addClass('invisible');
+          $('body').removeClass('theaterMode');
+        });
+      }
     }
   }
 }
 
 function updateFriendPhotos() {
-  if ($(window).scrollTop() >= $("#friendPhotos").height() - $(window).height() - 1000) {
-    hasRun = true;
-    if (!friendDone) {
-      // $("#friendLoading").toggle();
-      updateLine();
-      $.ajax({
-        url: "/friendTripLoad?startAt="  + friendNext,
-        cache: false,
-        success: function(html){
-          if ($("#rightCol").height() < $("#leftCol").height()) {
-            $("#rightCol").append(html);
-          } else {
-            $("#leftCol").append(html);
+  if (!friendHasRun) {
+    if ($(window).scrollTop() >= $("#friendPhotos").height() - $(window).height() - 1000) {
+      friendHasRun = true;
+      if (!friendDone) {
+        // $("#friendLoading").toggle();
+        updateLine();
+        $.ajax({
+          url: "/friendTripLoad?startAt="  + friendNext,
+          cache: false,
+          success: function(html){
+            if ($("#rightCol").height() < $("#leftCol").height()) {
+              $("#rightCol").append(html);
+            } else {
+              $("#leftCol").append(html);
+            }
+            friendHasRun = false;
+            friendNext = friendNext + 1;
+            updateLine();
+            // $("#friendLoading").toggle();
+            if ($(window).scrollTop() >= $("#friendPhotos").height() - $(window).height() - 1000) {
+              updateFriendPhotos();
+            } else {
+              if (youNext < 2) {
+                updatePhotos();
+              }
+            }
           }
-          hasRun = false;
-          friendNext = friendNext + 1;
-          updateLine();
-          // $("#friendLoading").toggle();
-          if ($(window).scrollTop() >= $("#friendPhotos").height() - $(window).height() - 1000) {
-            updateFriendPhotos();
-          }
-        }
-      });
+        });
+      }
     }
   }
 }

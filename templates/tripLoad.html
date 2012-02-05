@@ -5,15 +5,39 @@
     {% else %}
       <h2>{{ trip.title }}
         <div class="date">
-          {% if trip.end_date %}
-            {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
-              {{ trip.start_date|date:"M j, Y" }}
+          {% ifequal currentTime|date:"Y" trip.start_date|date:"Y" %}
+            {% if trip.end_date %}
+              {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
+                {{ trip.start_date|date:"M j" }}
+              {% else %}
+                {% ifequal trip.start_date|date:"M" trip.end_date|date:"M" %}
+                  {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"j" }}
+                {% else %}
+                  {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"M j" }}
+                {% endifequal %}
+              {% endifequal %}
             {% else %}
-              {{ trip.start_date|date:"M j, Y" }} - {{ trip.end_date|date:"M j, Y" }}
-            {% endifequal %}
+              Away since {{ trip.start_date|date:"M j" }}
+            {% endif %}
           {% else %}
-            {{ trip.start_date|date:"M j, Y" }} - now
-          {% endif %}
+            {% if trip.end_date %}
+              {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
+                {{ trip.start_date|date:"M j, Y" }}
+              {% else %}
+                {% ifequal trip.start_date|date:"Y" trip.end_date|date:"Y" %}
+                  {% ifequal trip.start_date|date:"M" trip.end_date|date:"M" %}
+                    {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"j, Y" }}
+                  {% else %}
+                    {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"M j, Y" }}
+                  {% endifequal %}
+                {% else %}
+                  {{ trip.start_date|date:"M j, Y" }} - {{ trip.end_date|date:"M j, Y" }}
+                {% endifequal %}
+              {% endifequal %}
+            {% else %}
+              Away since {{ trip.start_date|date:"M j, Y" }}
+            {% endif %}
+          {% endifequal %}
         </div>
       </h2>
     {% endif %}
