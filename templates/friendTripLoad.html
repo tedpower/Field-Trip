@@ -4,7 +4,7 @@
       <img src="{{ trip.get_mini_user.fs_profilePic }}" class="miniprofile">
       <div class="tripTitle">
         {% if trip.home %}
-          <h2 style="line-height:34px;">{{ trip.get_mini_user.firstName }}
+          <h2 style="line-height:40px; height:40px; margin: 0;">{{ trip.get_mini_user.firstName }}
           <span class="deemph">at home in {{ trip.title }}</span></h2>
         {% else %}
           <h2>{{ trip.get_mini_user.firstName }}
@@ -22,7 +22,8 @@
                   {% endifequal %}
                 {% endifequal %}
               {% else %}
-                Away since {{ trip.start_date|date:"M j" }}
+              <!-- if trip start day is today 'left this morning' or 'just started' -->
+                Now &nbsp;·&nbsp; since {{ trip.start_date|date:"M j" }}
               {% endif %}
             {% else %}
               {% if trip.end_date %}
@@ -40,7 +41,7 @@
                   {% endifequal %}
                 {% endifequal %}
               {% else %}
-                Away since {{ trip.start_date|date:"M j, Y" }}
+                Now &nbsp;·&nbsp; since {{ trip.start_date|date:"M j, Y" }}
               {% endif %}
             {% endifequal %}
           </div>

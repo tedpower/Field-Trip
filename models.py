@@ -84,6 +84,7 @@ class Photo(db.Model):
     ig_pushed_to_fs = db.BooleanProperty(default=False)
     hearted = db.StringListProperty()
     hidden = db.BooleanProperty(default=False)
+    trip_parent = db.ReferenceProperty()
 
 class Trip(db.Model):
     # key is the checkin id of the first checkin

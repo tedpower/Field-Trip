@@ -503,9 +503,13 @@ def findTripRanges(currentUser, photos, datePts):
     while notAdded:
       if thisTrip.start_date <= photo.fs_createdAt and thisTrip.ongoing == True:
         thisTrip.photos.append(photo.key_id)
+        photo.trip_parent = thisTrip.key()
+        photo.put()
         notAdded = False
       elif thisTrip.start_date <= photo.fs_createdAt <= thisTrip.end_date:
         thisTrip.photos.append(photo.key_id)
+        photo.trip_parent = thisTrip.key()
+        photo.put()
         notAdded = False
       else:
         thisTrip.put()

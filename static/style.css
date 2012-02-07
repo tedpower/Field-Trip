@@ -259,8 +259,8 @@ color: #666666;
 }
 
 #hide {
-    background-color: rgba(252, 252, 252, .9);
-    z-index: 1;
+    background-color: rgba(252, 252, 252, .8);
+    z-index: 4;
     position: fixed;
     top: 0;
     left: 0;
@@ -271,7 +271,8 @@ color: #666666;
 
 .invisible {
     background-color: rgba(27,27,27,0) !important;
-    z-index: -1 !important;
+    z-index: -3 !important;
+    display: none;
 }
 
 .theaterMode {
@@ -465,6 +466,12 @@ color: #666666;
 .tripHead h2 {
   margin: 4px 0 0 0;
   font-size: 13px;
+  width: 330px;
+  height: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 15px;
+  white-space: nowrap;
 }
 
 .deemph {

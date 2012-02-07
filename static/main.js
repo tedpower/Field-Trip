@@ -126,14 +126,17 @@ function updatePhotos() {
         });
         currentTrip = youNext - 1;
         $("#trip" + currentTrip).find(".photo").click(function() {
-          currentPhoto = "#l" + $(this).attr('id');
-          $(currentPhoto).removeClass('hidden');
+          // currentPhoto = "#l" + $(this).attr('id');
+          // $(currentPhoto).removeClass('hidden');
+
+
+
           $('#hide').removeClass('invisible');
           $('body').addClass('theaterMode');
         });
-        $("#trip" + currentTrip).find(".lightbox").click(function() {
-          $(this).addClass('hidden');
-          currentPhoto = null;
+        $("#hide").click(function() {
+          // $(this).addClass('hidden');
+          // currentPhoto = null;
           $('#hide').addClass('invisible');
           $('body').removeClass('theaterMode');
         });
