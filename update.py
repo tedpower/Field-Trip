@@ -67,6 +67,7 @@ class UpdateAllPhotos(webapp2.RequestHandler):
 
         # load in the ongoing trip photos
         ongoingTrip = Trip.get_by_key_name(user.ongoingTrip)
+        logging.info('starting with ongoing trip ' + user.ongoingTrip)
         for photoKey in ongoingTrip.photos:
           photoDiff.append(Photo.get_by_key_name(photoKey))
 
@@ -83,6 +84,8 @@ class UpdateAllPhotos(webapp2.RequestHandler):
           point = db.GeoPt(lat=lat,lon=lng)
           datePtsDiff.append((photo.fs_createdAt, point))
 
+        # shouldn't we also add in the start date as a date, plus pt?
+
         # sort geoPts by date, reverse chronological
         datePtsDiff = sorted(datePtsDiff, key=itemgetter(0), reverse=True)
 
@@ -96,14 +99,15 @@ class UpdateAllPhotos(webapp2.RequestHandler):
 
         # pop the old ongoing trip from the trip list and replace it with these trips
         user.trips = user.trips[1:]
+        ongoingTrip.delete()
         for trip in tripDiff:
           user.trips.insert(0, trip)
+        logging.info('ending with ongoing trip ' + user.ongoingTrip)
 
-      logging.info(datetime.datetime.now())
-      logging.info(user.last_updated)
+      # logging.info(datetime.datetime.now())
+      # logging.info(user.last_updated)
       user.last_updated = datetime.datetime.now()
       user.put()
-      logging.info('end')
 
 
 class UpdateAllFriends(webapp2.RequestHandler):

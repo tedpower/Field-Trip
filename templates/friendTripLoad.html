@@ -23,7 +23,7 @@
                 {% endifequal %}
               {% else %}
               <!-- if trip start day is today 'left this morning' or 'just started' -->
-                Now &nbsp;·&nbsp; since {{ trip.start_date|date:"M j" }}
+                <span class="now">Now</span> since {{ trip.start_date|date:"M j" }}
               {% endif %}
             {% else %}
               {% if trip.end_date %}
@@ -41,7 +41,7 @@
                   {% endifequal %}
                 {% endifequal %}
               {% else %}
-                Now &nbsp;·&nbsp; since {{ trip.start_date|date:"M j, Y" }}
+                <span class="now">Now</span> since {{ trip.start_date|date:"M j, Y" }}
               {% endif %}
             {% endifequal %}
           </div>

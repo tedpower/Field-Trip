@@ -112,7 +112,6 @@ function updatePhotos() {
           success: function(html){
             $("#ajax").append(html);
             hasRun = false;
-            youNext = youNext + 1;
             updateLine();
             $("#loading").toggle();
             if ($(window).scrollTop() >= $("#photos").height() - $(window).height() - 1000) {
@@ -129,7 +128,13 @@ function updatePhotos() {
           // currentPhoto = "#l" + $(this).attr('id');
           // $(currentPhoto).removeClass('hidden');
 
-
+          $.ajax({
+            url: "/lightboxLoad?photo="  + $(this).attr('id'),
+            cache: false,
+            success: function(html){
+              $("#hide").html(html);
+            }
+          });
 
           $('#hide').removeClass('invisible');
           $('body').addClass('theaterMode');

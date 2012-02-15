@@ -3,43 +3,42 @@
     {% if trip.home %}
       <h2>Home in {{ trip.title }}</h2>
     {% else %}
-      <h2>{{ trip.title }}
-        <div class="date">
-          {% ifequal currentTime|date:"Y" trip.start_date|date:"Y" %}
-            {% if trip.end_date %}
-              {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
-                {{ trip.start_date|date:"M j" }}
-              {% else %}
-                {% ifequal trip.start_date|date:"M" trip.end_date|date:"M" %}
-                  {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"j" }}
-                {% else %}
-                  {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"M j" }}
-                {% endifequal %}
-              {% endifequal %}
+      <h2>{{ trip.title }}</h2>
+      <div class="date">
+        {% ifequal currentTime|date:"Y" trip.start_date|date:"Y" %}
+          {% if trip.end_date %}
+            {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
+              {{ trip.start_date|date:"M j" }}
             {% else %}
-              Now &nbsp;·&nbsp; since {{ trip.start_date|date:"M j" }}
-            {% endif %}
+              {% ifequal trip.start_date|date:"M" trip.end_date|date:"M" %}
+                {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"j" }}
+              {% else %}
+                {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"M j" }}
+              {% endifequal %}
+            {% endifequal %}
           {% else %}
-            {% if trip.end_date %}
-              {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
-                {{ trip.start_date|date:"M j, Y" }}
-              {% else %}
-                {% ifequal trip.start_date|date:"Y" trip.end_date|date:"Y" %}
-                  {% ifequal trip.start_date|date:"M" trip.end_date|date:"M" %}
-                    {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"j, Y" }}
-                  {% else %}
-                    {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"M j, Y" }}
-                  {% endifequal %}
-                {% else %}
-                  {{ trip.start_date|date:"M j, Y" }} - {{ trip.end_date|date:"M j, Y" }}
-                {% endifequal %}
-              {% endifequal %}
+            <span class="now">Now</span> since {{ trip.start_date|date:"M j" }}
+          {% endif %}
+        {% else %}
+          {% if trip.end_date %}
+            {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
+              {{ trip.start_date|date:"M j, Y" }}
             {% else %}
-              Now &nbsp;·&nbsp; since {{ trip.start_date|date:"M j, Y" }}
-            {% endif %}
-          {% endifequal %}
-        </div>
-      </h2>
+              {% ifequal trip.start_date|date:"Y" trip.end_date|date:"Y" %}
+                {% ifequal trip.start_date|date:"M" trip.end_date|date:"M" %}
+                  {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"j, Y" }}
+                {% else %}
+                  {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"M j, Y" }}
+                {% endifequal %}
+              {% else %}
+                {{ trip.start_date|date:"M j, Y" }} - {{ trip.end_date|date:"M j, Y" }}
+              {% endifequal %}
+            {% endifequal %}
+          {% else %}
+            <span class="now">Now</span> since {{ trip.start_date|date:"M j, Y" }}
+          {% endif %}
+        {% endifequal %}
+      </div>
     {% endif %}
     <div class="tripPhotos clearfix" id="trip{{ next|add:"-1" }}">
       {% for photo in trip.get_all_photos %}
@@ -50,3 +49,4 @@
     </div>
   </div>
 {% endif %}
+<script>youNext = {{ next }};</script>

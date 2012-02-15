@@ -517,8 +517,8 @@ def findTripRanges(currentUser, photos, datePts):
         thisTrip = Trip.get_by_key_name(newTrips[tripIndx])
   thisTrip.put()
 
-  tripList = []
   # now loop through and delete trips without photos
+  tripList = []
   for trip in newTrips:
     thisTrip = Trip.get_by_key_name(trip)
     if not thisTrip.photos and not thisTrip.ongoing:
@@ -548,8 +548,12 @@ def findTripRanges(currentUser, photos, datePts):
     if len(tripList) > 1:
       currentUser.lastTripWithPhotos = tripList[1]
     elif len(currentUser.trips) > 1:
-      currentUser.lastTripWithPhotos = currentUser.trips[1]
+      for atrip in currentUser.trips:
+        if Trip.get_by_key_name(atrip).photos:
+          currentUser.lastTripWithPhotos = atrip
+          break
 
+  currentUser.put()
   return tripList
 
 
@@ -623,6 +627,7 @@ def nameTrips(trips, homeTown, homeState, homeCountry):
         thisTrip.title = nameify(thisTrip, states)
         thisTrip.put()
       elif len(cities) > 1:
+        named = False
         # check if all the photos have the same state
         if Photo.get_by_key_name(thisTrip.photos[0]).fs_state:
           firstState = Photo.get_by_key_name(thisTrip.photos[0]).fs_state
@@ -633,22 +638,22 @@ def nameTrips(trips, homeTown, homeState, homeCountry):
               allGood = False
           if allGood == True:
             if firstState != homeState:
+              named = True
               thisTrip.title = firstState
               thisTrip.put()
-            else:
-              citystate.reverse()
-              thisTrip.title = nameify(thisTrip, citystate)
-              thisTrip.put()
-          else:
-            citystate.reverse()
-            thisTrip.title = nameify(thisTrip, citystate)
-            thisTrip.put()
-        else:
+        if not named:
           citystate.reverse()
+          # if len(citystate) > 3:
+          #   abrevTitle = citystate[0] + " through to " + citystate[-1]
+          #   thisTrip.title = abrevTitle
+          # else:
           thisTrip.title = nameify(thisTrip, citystate)
           thisTrip.put()
       elif len(cities) == 1:
         thisTrip.title = citystate[0]
+        thisTrip.put()
+      elif len(states) == 1:
+        thisTrip.title = states[0]
         thisTrip.put()
 
     else:
@@ -725,6 +730,25 @@ class TripLoad(webapp2.RequestHandler):
         self.response.out.write(template.render(path, {'trip' : thisTrip, 'next' : startAt + 1, 'currentTime' : currentTime}))
       else:
         self.response.out.write('<script>youDone = true;</script>')
+
+
+class LightboxLoad(webapp2.RequestHandler):
+  def get(self):
+    cookieValue = None
+    try:
+      cookieValue = self.request.cookies['FT_Cookie']
+    except KeyError:
+      logging.info('no cookie')
+    if cookieValue:
+      currentUser = User.get_by_key_name(cookieValue)
+      photoID = self.request.get("photo")
+      logging.info(photoID)
+      thisPhoto = Photo.get_by_key_name(photoID)
+      thisTrip = thisPhoto.trip_parent
+
+      logging.info(photoID)
+      path = os.path.join(os.path.dirname(__file__), 'templates/tripLightbox.html')
+      self.response.out.write(template.render(path, {'trip' : thisTrip, 'currentPhoto' : photoID}))
 
 
 class FriendTripLoad(webapp2.RequestHandler):
@@ -944,7 +968,7 @@ def haversine(lat1, lon1, lat2, lon2):
 
 class FreshStart(webapp2.RequestHandler):
     def get(self):
-        taskqueue.add(url='/freshstartworker', params={})
+        # taskqueue.add(url='/freshstartworker', params={})
         self.redirect("/")
 
 
@@ -980,6 +1004,7 @@ app = webapp2.WSGIApplication([('/', Index,),
                                ('/freshstartworker', FreshStartWorker),
                                ('/tripLoad', TripLoad),
                                ('/friendTripLoad', FriendTripLoad),
+                               ('/lightboxLoad', LightboxLoad),
                                ('/findTrips', FindTrips),
                                ('/hidePhoto', HidePhoto),
                                ('/friends', Friends),
