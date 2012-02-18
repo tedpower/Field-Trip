@@ -447,7 +447,6 @@ def findTripRanges(currentUser, photos, datePts):
   currentTrip.key_id = tripKey
   currentTrip.user_id = currentUser.key().name()
   currentTrip.ongoing = True
-  currentUser.ongoingTrip = currentTrip.key_id
 
   cLat = datePts[0][1].lat
   cLng = datePts[0][1].lon
@@ -503,11 +502,13 @@ def findTripRanges(currentUser, photos, datePts):
     while notAdded:
       if thisTrip.start_date <= photo.fs_createdAt and thisTrip.ongoing == True:
         thisTrip.photos.append(photo.key_id)
+        thisTrip.count += 1
         photo.trip_parent = thisTrip.key()
         photo.put()
         notAdded = False
       elif thisTrip.start_date <= photo.fs_createdAt <= thisTrip.end_date:
         thisTrip.photos.append(photo.key_id)
+        thisTrip.count += 1
         photo.trip_parent = thisTrip.key()
         photo.put()
         notAdded = False
@@ -534,24 +535,12 @@ def findTripRanges(currentUser, photos, datePts):
     if thisTrip.home == True and prevTrip.home == True:
       thisTrip.photos.extend(prevTrip.photos)
       thisTrip.start_date = prevTrip.start_date
+      thisTrip.count = thisTrip.count + prevTrip.count
       thisTrip.put()
       prevTrip.delete()
       tripList.remove(tripList[i+1])
     else:
       i += 1
-
-  # check if the ongoing trip has photos
-  currentTrip = Trip.get_by_key_name(tripList[0])
-  if currentTrip.photos:
-    currentUser.lastTripWithPhotos = tripList[0]
-  else:
-    if len(tripList) > 1:
-      currentUser.lastTripWithPhotos = tripList[1]
-    elif len(currentUser.trips) > 1:
-      for atrip in currentUser.trips:
-        if Trip.get_by_key_name(atrip).photos:
-          currentUser.lastTripWithPhotos = atrip
-          break
 
   currentUser.put()
   return tripList
@@ -672,7 +661,9 @@ def airportJiggle(trips):
       if lastPhoto.cat_id == '4bf58dd8d48988d1ed931735' or lastPhoto.cat_id == '4bf58dd8d48988d1eb931735':
         # logging.info('found One')
         prevTrip.photos.insert(0, thisTrip.photos[-1])
+        prevTrip.count += 1
         thisTrip.photos = thisTrip.photos[0:-1]
+        thisTrip.count += -1
         newLastPhoto = Photo.get_by_key_name(thisTrip.photos[-1])
         thisTrip.start_date = newLastPhoto.fs_createdAt
         prevTrip.end_date = lastPhoto.fs_createdAt
@@ -683,7 +674,9 @@ def airportJiggle(trips):
       if firstPhoto.cat_id == '4bf58dd8d48988d1ed931735' or firstPhoto.cat_id == '4bf58dd8d48988d1eb931735':
         # logging.info('found another')
         thisTrip.photos.append(prevTrip.photos[0])
+        thisTrip.count += 1
         prevTrip.photos = prevTrip.photos[1:]
+        prevTrip.count += -1
         thisTrip.start_date = firstPhoto.fs_createdAt
         newFirstPhoto = Photo.get_by_key_name(thisTrip.photos[0])
         prevTrip.end_date = newFirstPhoto.fs_createdAt
@@ -788,6 +781,8 @@ class HidePhoto(webapp2.RequestHandler):
       thisPhoto.hidden = True
       thisPhoto.put()
       # thisTrip.put()
+
+      # decrement photo count...
 
     # remove it from the trip... probably also need a check to only render trips with at least 1 photo
     # rename the trip... there should be a way to look up which trip each photo belongs to
@@ -968,7 +963,7 @@ def haversine(lat1, lon1, lat2, lon2):
 
 class FreshStart(webapp2.RequestHandler):
     def get(self):
-        # taskqueue.add(url='/freshstartworker', params={})
+        taskqueue.add(url='/freshstartworker', params={})
         self.redirect("/")
 
 

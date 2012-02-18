@@ -31,8 +31,6 @@ class User(db.Model):
     twitter = db.StringProperty()
     last_updated = db.DateTimeProperty(auto_now_add=True)
     complete_stage = db.IntegerProperty()
-    ongoingTrip = db.StringProperty()
-    lastTripWithPhotos = db.StringProperty()
 
     @property
     def get_fs_photos(self):
@@ -96,6 +94,7 @@ class Trip(db.Model):
     end_date = db.DateTimeProperty()
     ongoing = db.BooleanProperty(default=False)
     home = db.BooleanProperty()
+    count = db.IntegerProperty(default=0)
 
     @property
     def get_all_photos(self):

@@ -66,8 +66,8 @@ class UpdateAllPhotos(webapp2.RequestHandler):
       if len(photoDiff) > 0 or len(datePtsDiff) > 0:
 
         # load in the ongoing trip photos
-        ongoingTrip = Trip.get_by_key_name(user.ongoingTrip)
-        logging.info('starting with ongoing trip ' + user.ongoingTrip)
+        ongoingTrip = Trip.get_by_key_name(user.trips[0])
+        logging.info('starting with ongoing trip ' + user.trips[0])
         for photoKey in ongoingTrip.photos:
           photoDiff.append(Photo.get_by_key_name(photoKey))
 
@@ -97,12 +97,15 @@ class UpdateAllPhotos(webapp2.RequestHandler):
         # if there are any airports adjacent to a trip, add them to that trip
         main.airportJiggle(tripDiff)
 
+
         # pop the old ongoing trip from the trip list and replace it with these trips
         user.trips = user.trips[1:]
-        ongoingTrip.delete()
+
+        tripDiff.reverse()
         for trip in tripDiff:
+          logging.info('adding trip ' + trip)
           user.trips.insert(0, trip)
-        logging.info('ending with ongoing trip ' + user.ongoingTrip)
+        logging.info('ending with ongoing trip ' + user.trips[0])
 
       # logging.info(datetime.datetime.now())
       # logging.info(user.last_updated)
