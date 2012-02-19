@@ -447,6 +447,7 @@ def findTripRanges(currentUser, photos, datePts):
   currentTrip.key_id = tripKey
   currentTrip.user_id = currentUser.key().name()
   currentTrip.ongoing = True
+  currentTrip.latest_pt = datePts[0][1]
 
   cLat = datePts[0][1].lat
   cLng = datePts[0][1].lon
@@ -456,6 +457,7 @@ def findTripRanges(currentUser, photos, datePts):
   else:
     currentTrip.home = True
   prevCheckinDate = datePts[0][0]
+  prevCheckinPt = datePts[0][1]
   newTrips = []
 
   for i in range(1, len(datePts)):
@@ -465,6 +467,7 @@ def findTripRanges(currentUser, photos, datePts):
     if checkinDstnc > currentUser.radius and currentTrip.home == True:
       # hey we're starting a new trip! First wrap up the old one
       currentTrip.start_date = prevCheckinDate
+      currentTrip.start_pt = prevCheckinPt
       currentTrip.put()
       newTrips.append(currentTrip.key().name())
       currentTime = datePts[i][0]
@@ -473,10 +476,12 @@ def findTripRanges(currentUser, photos, datePts):
       currentTrip.key_id = tripKey
       currentTrip.user_id = currentUser.key().name()
       currentTrip.end_date = datePts[i][0]
+      currentTrip.latest_pt = datePts[i][1]
       currentTrip.home = False
     elif checkinDstnc < currentUser.radius and currentTrip.home == False:
       # end trip
       currentTrip.start_date = prevCheckinDate
+      currentTrip.start_pt = prevCheckinPt
       currentTrip.put()
       newTrips.append(currentTrip.key().name())
       # Start a new trip at home
@@ -486,11 +491,14 @@ def findTripRanges(currentUser, photos, datePts):
       currentTrip.key_id = tripKey
       currentTrip.user_id = currentUser.key().name()
       currentTrip.end_date = datePts[i][0]
+      currentTrip.latest_pt = datePts[i][1]
       currentTrip.home = True
     prevCheckinDate = datePts[i][0]
+    prevCheckinPt = datePts[i][1]
 
   # add the first trip
   currentTrip.start_date = prevCheckinDate
+  currentTrip.start_pt = prevCheckinPt
   newTrips.append(currentTrip.key().name())
   currentTrip.put()
 
@@ -599,6 +607,33 @@ def nameTrips(trips, homeTown, homeState, homeCountry):
             stateShort = False
             newCity = False
             thisPhoto.put()
+
+      # this should only happen if the first photo is at an airport, etc.
+      if len(cities) == len(states) == len(countries) == 0:
+          google_url = "http://maps.googleapis.com/maps/api/geocode/json?latlng=%s,%s&sensor=false" % (thisTrip.latest_pt.lat, thisTrip.latest_pt.lon)
+          google_json = urlfetch.fetch(google_url, validate_certificate=False)
+          google_response = simplejson.loads(google_json.content)
+          if len(google_response['results']) > 0:
+            firstGeocode = google_response['results'][0]
+            for component in firstGeocode['address_components']:
+              for gType in component['types']:
+                if gType == 'locality':
+                  cities.append(component['long_name'])
+                  city = component['long_name']
+                if gType == 'sublocality':
+                  subCity = component['long_name']
+                if gType == 'administrative_area_level_1':
+                  stateShort = component['short_name']
+                  states.append(component['short_name'])
+                if gType == 'country':
+                  countries.append(component['short_name'])
+            if city is None and subCity is not None:
+                cities.append(subCity)
+            if stateShort:
+              combinedCityState = city + ", " + stateShort
+              citystate.append(combinedCityState)
+            else:
+              citystate.append(newCity)
 
       logging.info("------------------------------------------")
       logging.info(cities)

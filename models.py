@@ -92,6 +92,8 @@ class Trip(db.Model):
     title = db.StringProperty()
     start_date = db.DateTimeProperty()
     end_date = db.DateTimeProperty()
+    start_pt = db.GeoPtProperty()
+    latest_pt = db.GeoPtProperty()
     ongoing = db.BooleanProperty(default=False)
     home = db.BooleanProperty()
     count = db.IntegerProperty(default=0)
@@ -114,9 +116,16 @@ class Trip(db.Model):
 
     @property
     def get_photos_mini(self):
-        thisUser = User.get_by_key_name(self.user_id)
-        thisPhoto = Photo.get_by_key_name(self.photos[0])
-        return thisPhoto
+        listOfPhotos = []
+        for photo in self.photos:
+            if len(listOfPhotos) < 5:
+                listOfPhotos.append(Photo.get_by_key_name(photo))
+            else:
+                break
+        return listOfPhotos
+
+
+        # thisPhoto = Photo.get_by_key_name(self.photos[0])
 
         # maxPhotos = 5
         # thisUser = User.get_by_key_name(self.user_id)

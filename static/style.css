@@ -233,9 +233,9 @@ color: #666666;
 }
 
 .friendTrip {
-  width: 380px;
+  width: 384px;
   background-color: #fff;
-  padding: 10px;
+  padding: 10px 6px 10px 10px;
   margin: 30px;
   box-shadow: 0 2px 0 rgba(34, 25, 25, 0.09);
 }
@@ -463,11 +463,11 @@ color: #666666;
 }
 
 .tripHead {
-  padding-bottom: 10px;
+  padding-bottom: 6px;
 }
 
 .tripHead img {
-    padding: 0 10px 0 0;
+    margin: 0 10px 0 0;
     width: 40px;
     height: 40px;
 }
@@ -494,33 +494,61 @@ color: #666666;
     padding-top: 2px;
 }
 
-.friendTrip .friendPhoto:first-child {
-    width: 380px;
-    height: 380px;
-    padding: 0;
-}
-
-.friendTrip .friendPhoto {
-    width: 78px;
-    height: 78px;
+.mThumbFPhoto {
+    width: 188px;
+    height: 188px;
     vertical-align: top;
     float: left;
-    padding: 0 4px 4px 0;
+    margin: 4px 4px 0 0;
+}
+
+.sThumbFPhoto, .moreCount {
+    width: 92px;
+    height: 92px;
+    vertical-align: top;
+    float: left;
+    margin: 4px 4px 0 0;
+}
+
+.heroFPhoto {
+    width: 380px;
+    height: 380px;
+    margin: 4px 4px 0 0;
+    float: left;
+    background-color: #ECEEF0;
+    background-size: 380px auto;
+    background-repeat: no-repeat;
+    background-position: center center;
+}
+
+.shortHeroFPhoto {
+    width: 380px;
+    height: 188px;
+    margin: 4px 4px 0 0;
+    float: left;
+    background-color: #ECEEF0;
+    background-size: 380px auto;
+    background-repeat: no-repeat;
+    background-position: center center;
+}
+
+.landscape {
+  background-size: auto 380px;
 }
 
 .moreCount {
-    width: 78px;
-    height: 78px;
     background-color: #E7EAF2;
     display: block;
-    float: left;
-    padding: 0;
-    margin: 0;
+    padding: 0px;
     text-align: center;
-    line-height: 78px;
+    line-height: 92px;
     font-size: 20px;
     font-weight: bold;
     color: #6D84B4;
+}
+
+.friendTrip img {
+    background-color: #ECEEF0;
 }
 
 /* Hacks ---------- */
