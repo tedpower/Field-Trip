@@ -1,27 +1,28 @@
 {% for photo in trip.get_all_photos %}
   {% if not photo.hidden %}
     <div id="l{{photo.key_id}}" class="lightbox {% ifnotequal photo.key_id currentPhoto %}hidden{% endifnotequal %}">
-      <div class="zoomContent" style="width:{{ photo.width }}px;">
-        <img src="{{ photo.photo_url }}">
-      </div>
-
-      <div class="meta" style="width:{{ photo.width }}px;">
-        {% if photo.shout %}
-          <div class="shout"><span class="firstname">{{ user.firstName }}:</span> "{{photo.shout}}"</div>
-        {% endif %}
-        {% if photo.fs_venue_name and photo.fs_venue_id %}
-          <a class="venue" href="https://foursquare.com/v/{{photo.fs_venue_id}}">{{photo.fs_venue_name}}</a>
-        {% else %}
-          {% if photo.fs_venue_name %}
-            <div class="venue">{{photo.fs_venue_name}}</div>
-          {% endif %}
-        {% endif %}
-        {% if photo.link %}
-          <a class="date" href="{{ photo.link }}">{{ photo.fs_createdAt|date:"M j, Y" }}</a>
-        {% else %}
-          <div class="date">{{ photo.fs_createdAt|date:"M j, Y" }}</div>
-        {% endif %}
-        <a href="/hidePhoto?id={{ photo.key_id }}">Hide</a>
+      <div class="zoomContentWrap" style="width:{{ photo.width }}px;">
+        <div class="zoomContent" style="width:{{ photo.width }}px;">
+          <img src="{{ photo.photo_url }}">
+          <div class="meta" style="width:{{ photo.width|add:"-40" }}px;">
+            {% if photo.shout %}
+              <div class="shout"><span class="firstname">{{ user.firstName }}:</span> "{{photo.shout}}"</div>
+            {% endif %}
+            {% if photo.fs_venue_name and photo.fs_venue_id %}
+              <a class="venue" href="https://foursquare.com/v/{{photo.fs_venue_id}}">{{photo.fs_venue_name}}</a>
+            {% else %}
+              {% if photo.fs_venue_name %}
+                <div class="venue">{{photo.fs_venue_name}}</div>
+              {% endif %}
+            {% endif %}
+            {% if photo.link %}
+              <a class="date" href="{{ photo.link }}">{{ photo.fs_createdAt|date:"M j, Y" }}</a>
+            {% else %}
+              <div class="date">{{ photo.fs_createdAt|date:"M j, Y" }}</div>
+            {% endif %}
+            <a href="/hidePhoto?id={{ photo.key_id }}">Hide</a>
+          </div>
+        </div>
       </div>
     </div>
 

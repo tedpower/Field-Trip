@@ -133,11 +133,12 @@ function updatePhotos() {
             cache: false,
             success: function(html){
               $("#hide").html(html);
+              $('#hide').removeClass('invisible');
+              $('body').addClass('theaterMode');
             }
           });
 
-          $('#hide').removeClass('invisible');
-          $('body').addClass('theaterMode');
+
         });
         $("#hide").click(function() {
           // $(this).addClass('hidden');

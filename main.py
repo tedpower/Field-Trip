@@ -546,6 +546,12 @@ def findTripRanges(currentUser, photos, datePts):
       thisTrip.count = thisTrip.count + prevTrip.count
       thisTrip.put()
       prevTrip.delete()
+
+      for photo in thisTrip.photos:
+        thisPhoto = Photo.get_by_key_name(photo)
+        thisPhoto.trip_parent = thisTrip.key()
+        thisPhoto.put()
+
       tripList.remove(tripList[i+1])
     else:
       i += 1
@@ -704,6 +710,8 @@ def airportJiggle(trips):
         prevTrip.end_date = lastPhoto.fs_createdAt
         thisTrip.put()
         prevTrip.put()
+        lastPhoto.trip_parent = prevTrip.key()
+        lastPhoto.put()
     elif not thisTrip.home and prevTrip.home:
       firstPhoto = Photo.get_by_key_name(prevTrip.photos[0])
       if firstPhoto.cat_id == '4bf58dd8d48988d1ed931735' or firstPhoto.cat_id == '4bf58dd8d48988d1eb931735':
@@ -717,6 +725,8 @@ def airportJiggle(trips):
         prevTrip.end_date = newFirstPhoto.fs_createdAt
         thisTrip.put()
         prevTrip.put()
+        firstPhoto.trip_parent = thisTrip.key()
+        firstPhoto.put()
     i += 1
 
 
@@ -801,6 +811,7 @@ class FriendTripLoad(webapp2.RequestHandler):
         self.response.out.write(template.render(path, {'trip' : thisTrip, 'next' : startAt + 1, 'currentTime' : currentTime}))
       else:
         self.response.out.write('<script>friendDone = true;</script>')
+
 
 class HidePhoto(webapp2.RequestHandler):
   def get(self):
