@@ -21,6 +21,9 @@
               <div class="date">{{ photo.fs_createdAt|date:"M j, Y" }}</div>
             {% endif %}
             <a href="/hidePhoto?id={{ photo.key_id }}">Hide</a>
+            {% for comment in photo.get_comments %}
+              <p>{{ comment.name }} : {{ comment.text }}</p>
+            {% endfor %}
           </div>
         </div>
       </div>

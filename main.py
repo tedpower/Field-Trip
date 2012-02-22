@@ -284,7 +284,7 @@ def FS_LoadPhoto(photo, currentUser):
     if currentUser.twitter:
       userPath = currentUser.twitter
     else:
-      userPath = currentUser.fs_id
+      userPath = "user/" + currentUser.fs_id
     newPhoto.link = "https://foursquare.com/%s/checkin/%s" % (userPath, newPhoto.fs_checkin_id)
     if 'shout' in photo['checkin']:
       newPhoto.shout = photo['checkin']['shout']
@@ -445,7 +445,7 @@ def findTripRanges(currentUser, photos, datePts):
   tripKey = "f" + currentUser.fs_id + "d" + str(int(time.mktime(currentTime.timetuple())))
   currentTrip = Trip(key_name=tripKey)
   currentTrip.key_id = tripKey
-  currentTrip.user_id = currentUser.key().name()
+  currentTrip.user_parent = currentUser.key()
   currentTrip.ongoing = True
   currentTrip.latest_pt = datePts[0][1]
 
@@ -474,7 +474,7 @@ def findTripRanges(currentUser, photos, datePts):
       tripKey = "f" + currentUser.fs_id + "d" + str(int(time.mktime(currentTime.timetuple())))
       currentTrip = Trip(key_name=tripKey)
       currentTrip.key_id = tripKey
-      currentTrip.user_id = currentUser.key().name()
+      currentTrip.user_parent = currentUser.key()
       currentTrip.end_date = datePts[i][0]
       currentTrip.latest_pt = datePts[i][1]
       currentTrip.home = False
@@ -489,7 +489,7 @@ def findTripRanges(currentUser, photos, datePts):
       tripKey = "f" + currentUser.fs_id + "d" + str(int(time.mktime(currentTime.timetuple())))
       currentTrip = Trip(key_name=tripKey)
       currentTrip.key_id = tripKey
-      currentTrip.user_id = currentUser.key().name()
+      currentTrip.user_parent = currentUser.key()
       currentTrip.end_date = datePts[i][0]
       currentTrip.latest_pt = datePts[i][1]
       currentTrip.home = True
@@ -606,8 +606,14 @@ def nameTrips(trips, homeTown, homeState, homeCountry):
                 newCity = subCity
             if newCity:
               if stateShort:
-                combinedCityState = newCity + ", " + stateShort
-                citystate.append(combinedCityState)
+                if thisPhoto.fs_country == 'United States':
+                  combinedCityState = newCity + ", " + stateShort
+                  citystate.append(combinedCityState)
+                else:
+                  # don't want to use states outside the US -- Paris, IdF
+                  if thisPhoto.fs_country:
+                    combinedCityState = newCity + ", " + thisPhoto.fs_country
+                    citystate.append(combinedCityState)
               else:
                 citystate.append(newCity)
             stateShort = False
@@ -785,6 +791,9 @@ class LightboxLoad(webapp2.RequestHandler):
       thisTrip = thisPhoto.trip_parent
 
       logging.info(photoID)
+
+      # memechache
+
       path = os.path.join(os.path.dirname(__file__), 'templates/tripLightbox.html')
       self.response.out.write(template.render(path, {'trip' : thisTrip, 'currentPhoto' : photoID}))
 
@@ -826,15 +835,20 @@ class HidePhoto(webapp2.RequestHandler):
       thisPhoto = Photo.get_by_key_name(photoID)
       thisPhoto.hidden = True
       thisPhoto.put()
-      # thisTrip.put()
 
-      # decrement photo count...
+      thisTrip = thisPhoto.trip_parent
+      thisTrip.photos.remove(thisPhoto.key().name())
 
-    # remove it from the trip... probably also need a check to only render trips with at least 1 photo
-    # rename the trip... there should be a way to look up which trip each photo belongs to
-    #
-    # or maybe do it with a hidden count on the trip, if it's < then show the trip? prob. not if we care about naming
-    # in the javascript ajax remove the photo and the preview
+      thisTrip.count += -1
+
+      if thisTrip.count == 0:
+        logging.info('removing the trip')
+        currentUser.trips.remove(thisTrip.key().name())
+        currentUser.put()
+      else:
+        nameTrips([thisTrip.key().name()], currentUser.homeCity, currentUser.gHomeState, currentUser.gHomeCountry)
+
+      thisTrip.put()
 
 
 class Friends(webapp2.RequestHandler):

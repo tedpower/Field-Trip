@@ -1,5 +1,8 @@
 from google.appengine.ext import db
 import datetime
+from django.utils import simplejson
+from google.appengine.api import urlfetch
+import logging
 
 class User(db.Model):
     key_id = db.StringProperty()
@@ -84,10 +87,32 @@ class Photo(db.Model):
     hidden = db.BooleanProperty(default=False)
     trip_parent = db.ReferenceProperty()
 
+    @property
+    def get_comments(self):
+        if self.fs_checkin_id:
+            thisUser = self.trip_parent.user_parent
+            comments_url = "https://api.foursquare.com/v2/checkins/%s?oauth_token=%s" % (self.fs_checkin_id, thisUser.fs_token)
+            comments_json = urlfetch.fetch(comments_url, validate_certificate=False)
+            comments_response = simplejson.loads(comments_json.content)
+
+            comments = comments_response['response']['checkin']['comments']
+            commentCount = comments['count']
+
+            commentList = []
+
+            if commentCount > 0:
+                for comment in comments['items']:
+                    name = comment['user']['firstName']
+                    photo = comment['user']['photo']
+                    timestamp = comment['createdAt']
+                    text = comment['text']
+                    commentList.append({'name':name, 'photo':photo, 'timestamp':timestamp, 'text':text})
+            return commentList
+
 class Trip(db.Model):
     # key is the checkin id of the first checkin
     key_id = db.StringProperty()
-    user_id = db.StringProperty()
+    user_parent = db.ReferenceProperty()
     photos = db.StringListProperty()
     title = db.StringProperty()
     start_date = db.DateTimeProperty()
@@ -101,7 +126,7 @@ class Trip(db.Model):
     @property
     def get_all_photos(self):
         listOfPhotos = []
-        thisUser = User.get_by_key_name(self.user_id)
+        thisUser = self.user_parent
         for photoKey in self.photos:
             thisPhoto = Photo.get_by_key_name(photoKey)
             if (not thisPhoto.ig_pushed_to_fs) or (thisUser.ig_id == None):
@@ -124,55 +149,7 @@ class Trip(db.Model):
                 break
         return listOfPhotos
 
-
-        # thisPhoto = Photo.get_by_key_name(self.photos[0])
-
-        # maxPhotos = 5
-        # thisUser = User.get_by_key_name(self.user_id)
-        # totalPhotos = 0
-        # listOfPhotos = []
-        # for photoKey in self.photos:
-        #     thisPhoto = Photo.get_by_key_name(photoKey)
-        #     if (not thisPhoto.ig_pushed_to_fs) or (thisUser.ig_id == None):
-        #         if thisPhoto.hidden is False:
-        #             if len(listOfPhotos) <= maxPhotos:
-        #                 listOfPhotos.append(thisPhoto)
-        #             totalPhotos += 1
-
-        # if self.home is False and self.ongoing is False:
-        #     listOfPhotos.reverse()
-
-        # remainingPhotos = totalPhotos - maxPhotos
-
-        # tripWidth = None
-        # if totalPhotos == 1:
-        #     tripWidth = 164
-        # elif 1 < totalPhotos < 4:
-        #     tripWidth = 246
-        # elif 3 < totalPhotos < 6:
-        #     tripWidth = 328
-        # elif 5 < totalPhotos < 8:
-        #     tripWidth = 410
-        # elif 7 < totalPhotos < 10:
-        #     tripWidth = 492
-        # elif 9 < totalPhotos < 12:
-        #     tripWidth = 574
-        # elif 11 < totalPhotos < 14:
-        #     tripWidth = 656
-        # elif 13 < totalPhotos < 16:
-        #     tripWidth = 738
-        # elif totalPhotos > 15:
-        #     tripWidth = 820
-
-        # if remainingPhotos > 1:
-        #     listOfPhotos.pop()
-
-        # if totalPhotos == 0:
-        #     return False
-        # else:
-        #     return (listOfPhotos, remainingPhotos, tripWidth)
-
     @property
     def get_mini_user(self):
-        thisUser = User.get_by_key_name(self.user_id)
+        thisUser = self.user_parent
         return thisUser

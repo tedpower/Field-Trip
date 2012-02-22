@@ -138,7 +138,6 @@ function updatePhotos() {
             }
           });
 
-
         });
         $("#hide").click(function() {
           // $(this).addClass('hidden');
