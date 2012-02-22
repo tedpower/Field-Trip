@@ -1,6 +1,9 @@
 {% for photo in trip.get_all_photos %}
   {% if not photo.hidden %}
     <div id="l{{photo.key_id}}" class="lightbox {% ifnotequal photo.key_id currentPhoto %}hidden{% endifnotequal %}">
+      {% ifequal photo.key_id currentPhoto %}
+      <script>currentPhoto = "#l{{ currentPhoto }}";</script>
+      {% endifequal %}
       <div class="zoomContentWrap" style="width:{{ photo.width }}px;">
         <div class="zoomContent" style="width:{{ photo.width }}px;">
           <img src="{{ photo.photo_url }}">
@@ -28,6 +31,5 @@
         </div>
       </div>
     </div>
-
   {% endif %}
 {% endfor %}

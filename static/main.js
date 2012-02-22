@@ -60,16 +60,7 @@ $(document).keydown(function(e){
 
  if (e.keyCode == 37) {
   $(currentPhoto).addClass('hidden');
-  prevPhoto = $(currentPhoto).prevAll('.lightbox').first().attr('id');
-  if (!prevPhoto) {
-    prevTrip = $(currentPhoto).parent().parent().prev();
-    if (prevTrip.children('.tripPhotos').length == 0) {
-      console.log('hey');
-      closeLightbox();
-      return false;
-    }
-    prevPhoto = prevTrip.children('.tripPhotos').children('.lightbox').last().attr('id');
-  }
+  prevPhoto = $(currentPhoto).prev().attr('id');
   currentPhoto = "#" + prevPhoto;
   $(currentPhoto).removeClass('hidden');
   return false;
@@ -79,16 +70,7 @@ $(document).keydown(function(e){
  if (e.keyCode == 39) {
    if ($(currentPhoto).next().attr('id') != 'end') {
     $(currentPhoto).addClass('hidden');
-    nextPhoto = $(currentPhoto).nextAll('.lightbox').first().attr('id');
-    if (!nextPhoto) {
-      nextTrip = $(currentPhoto).parent().parent().next();
-      if (nextTrip.children('.tripPhotos').length == 0) {
-        console.log('hey');
-        closeLightbox(); // load more
-        return false;
-      }
-      nextPhoto = nextTrip.children('.tripPhotos').children('.lightbox').first().attr('id');
-    }
+    nextPhoto = $(currentPhoto).next().attr('id');
     currentPhoto = "#" + nextPhoto;
     $(currentPhoto).removeClass('hidden');
     return false;
