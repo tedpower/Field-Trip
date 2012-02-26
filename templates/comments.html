@@ -1,0 +1,3 @@
+{% for comment in photo.get_comments %}
+<p>{{ comment.name }} : {{ comment.text }}</p>
+{% endfor %}

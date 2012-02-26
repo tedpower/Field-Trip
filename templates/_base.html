@@ -31,15 +31,17 @@
 
 <div id="top">
 <h1>FIELD TRIP</h1>
-  <a href="/" id="you"
-  {% ifequal path '/' %}
-    class="selected"
-  {% endifequal %}
-  >You</a>&nbsp; · &nbsp;<a href="/friends" id="friends"
+  <a href="/friends" id="friends"
   {% ifequal path '/friends' %}
     class="selected"
   {% endifequal %}
   >Friends</a>
+  &nbsp;·&nbsp;
+  <a href="/" id="you"
+  {% ifequal path '/' %}
+    class="selected"
+  {% endifequal %}
+  >You</a>
 </div>
 
 <div id="lineWrap"><div id="line"></div></div>
@@ -63,9 +65,7 @@
 {% endblock %}
 </div>
 
-<div id="hide" class="invisible">
-<p>Hi!!!!</p>
-</div>
+<div id="hide" class="invisible"></div>
 
 </body>
 </html>

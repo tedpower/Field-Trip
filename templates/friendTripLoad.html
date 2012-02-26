@@ -58,8 +58,8 @@
         style="background-image:url('{{ trip.get_photos_mini.0.photo_url }}');"></div>
       {% endif %}
       {% if trip.count == 2 %}
-        <img src="{{ trip.get_photos_mini.0.fs_300 }}" class="mThumbFPhoto">
-        <img src="{{ trip.get_photos_mini.1.fs_300 }}" class="mThumbFPhoto">
+        <img src="{{ trip.get_photos_mini.0.med_thumb }}" class="mThumbFPhoto">
+        <img src="{{ trip.get_photos_mini.1.med_thumb }}" class="mThumbFPhoto">
       {% endif %}
       {% if trip.count == 3 %}
         <div class="shortHeroFPhoto
@@ -67,14 +67,14 @@
           landscape
         {% endif %}"
         style="background-image:url('{{ trip.get_photos_mini.0.photo_url }}');"></div>
-        <img src="{{ trip.get_photos_mini.1.fs_300 }}" class="mThumbFPhoto">
-        <img src="{{ trip.get_photos_mini.2.fs_300 }}" class="mThumbFPhoto">
+        <img src="{{ trip.get_photos_mini.1.med_thumb }}" class="mThumbFPhoto">
+        <img src="{{ trip.get_photos_mini.2.med_thumb }}" class="mThumbFPhoto">
       {% endif %}
       {% if trip.count == 4 %}
-        <img src="{{ trip.get_photos_mini.0.fs_300 }}" class="mThumbFPhoto">
-        <img src="{{ trip.get_photos_mini.1.fs_300 }}" class="mThumbFPhoto">
-        <img src="{{ trip.get_photos_mini.2.fs_300 }}" class="mThumbFPhoto">
-        <img src="{{ trip.get_photos_mini.3.fs_300 }}" class="mThumbFPhoto">
+        <img src="{{ trip.get_photos_mini.0.med_thumb }}" class="mThumbFPhoto">
+        <img src="{{ trip.get_photos_mini.1.med_thumb }}" class="mThumbFPhoto">
+        <img src="{{ trip.get_photos_mini.2.med_thumb }}" class="mThumbFPhoto">
+        <img src="{{ trip.get_photos_mini.3.med_thumb }}" class="mThumbFPhoto">
       {% endif %}
       {% if trip.count == 5 %}
         <div class="heroFPhoto
@@ -82,10 +82,10 @@
           landscape
         {% endif %}"
         " style="background-image:url('{{ trip.get_photos_mini.0.photo_url }}');"></div>
-        <img src="{{ trip.get_photos_mini.1.fs_300 }}" class="sThumbFPhoto">
-        <img src="{{ trip.get_photos_mini.2.fs_300 }}" class="sThumbFPhoto">
-        <img src="{{ trip.get_photos_mini.3.fs_300 }}" class="sThumbFPhoto">
-        <img src="{{ trip.get_photos_mini.4.fs_300 }}" class="sThumbFPhoto">
+        <img src="{{ trip.get_photos_mini.1.small_thumb }}" class="sThumbFPhoto">
+        <img src="{{ trip.get_photos_mini.2.small_thumb }}" class="sThumbFPhoto">
+        <img src="{{ trip.get_photos_mini.3.small_thumb }}" class="sThumbFPhoto">
+        <img src="{{ trip.get_photos_mini.4.small_thumb }}" class="sThumbFPhoto">
       {% endif %}
       {% if trip.count > 5 %}
         <div class="heroFPhoto
@@ -93,9 +93,9 @@
           landscape
         {% endif %}"
         style="background-image:url('{{ trip.get_photos_mini.0.photo_url }}');"></div>
-        <img src="{{ trip.get_photos_mini.1.fs_300 }}" class="sThumbFPhoto">
-        <img src="{{ trip.get_photos_mini.2.fs_300 }}" class="sThumbFPhoto">
-        <img src="{{ trip.get_photos_mini.3.fs_300 }}" class="sThumbFPhoto">
+        <img src="{{ trip.get_photos_mini.1.small_thumb }}" class="sThumbFPhoto">
+        <img src="{{ trip.get_photos_mini.2.small_thumb }}" class="sThumbFPhoto">
+        <img src="{{ trip.get_photos_mini.3.small_thumb }}" class="sThumbFPhoto">
         <div class="moreCount">+{{ trip.count|add:"-4"}}</div>
       {% endif %}
 

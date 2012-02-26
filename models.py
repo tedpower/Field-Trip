@@ -65,7 +65,8 @@ class Photo(db.Model):
     key_id = db.StringProperty()
     fs_checkin_id = db.StringProperty()
     photo_url = db.StringProperty()
-    fs_300 = db.StringProperty()
+    med_thumb = db.StringProperty()
+    small_thumb = db.StringProperty()
     fs_createdAt = db.DateTimeProperty()
     fs_venue_name = db.StringProperty()
     fs_venue_id = db.StringProperty()
@@ -83,12 +84,18 @@ class Photo(db.Model):
     height = db.IntegerProperty()
     link = db.StringProperty()
     ig_pushed_to_fs = db.BooleanProperty(default=False)
+    fs_venue_only_photo = db.BooleanProperty(default=False)
     hearted = db.StringListProperty()
     hidden = db.BooleanProperty(default=False)
     trip_parent = db.ReferenceProperty()
 
     @property
     def get_comments(self):
+
+        commentList = []
+        if self.fs_venue_only_photo:
+            return commentList
+
         if self.fs_checkin_id:
             thisUser = self.trip_parent.user_parent
             comments_url = "https://api.foursquare.com/v2/checkins/%s?oauth_token=%s" % (self.fs_checkin_id, thisUser.fs_token)
@@ -98,8 +105,6 @@ class Photo(db.Model):
             comments = comments_response['response']['checkin']['comments']
             commentCount = comments['count']
 
-            commentList = []
-
             if commentCount > 0:
                 for comment in comments['items']:
                     name = comment['user']['firstName']
@@ -107,7 +112,24 @@ class Photo(db.Model):
                     timestamp = comment['createdAt']
                     text = comment['text']
                     commentList.append({'name':name, 'photo':photo, 'timestamp':timestamp, 'text':text})
-            return commentList
+        else:
+            thisUser = self.trip_parent.user_parent
+            comments_url = "https://api.instagram.com/v1/media/%s?access_token=%s" % (self.key_id, thisUser.ig_token)
+            comments_json = urlfetch.fetch(comments_url, validate_certificate=False, deadline=10)
+            comments_response = simplejson.loads(comments_json.content)
+
+            comments = comments_response['data']['comments']
+            commentCount = comments['count']
+
+            if commentCount > 0:
+                for comment in comments['data']:
+                    name = comment['from']['username']
+                    photo = comment['from']['profile_picture']
+                    timestamp = comment['created_time']
+                    text = comment['text']
+                    commentList.append({'name':name, 'photo':photo, 'timestamp':timestamp, 'text':text})
+
+        return commentList
 
 class Trip(db.Model):
     # key is the checkin id of the first checkin
@@ -144,6 +166,7 @@ class Trip(db.Model):
         listOfPhotos = []
         for photo in self.photos:
             if len(listOfPhotos) < 5:
+                # should sort em
                 listOfPhotos.append(Photo.get_by_key_name(photo))
             else:
                 break

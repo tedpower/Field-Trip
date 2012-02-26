@@ -2,6 +2,7 @@ from math import *
 import webapp2
 from google.appengine.api import urlfetch
 from google.appengine.api import taskqueue
+from google.appengine.api import memcache
 from django.utils import simplejson
 from google.appengine.ext.webapp import template
 from operator import itemgetter, attrgetter
@@ -30,23 +31,22 @@ class Index(webapp2.RequestHandler):
     if cookieValue is not None:
       logging.info('cookie found')
       cookieUser = User.get_by_key_name(cookieValue)
-      if cookieUser.complete_stage == 1:
-        self.redirect("/signup")
-      if cookieUser.complete_stage == 2:
-        path = os.path.join(os.path.dirname(__file__), 'templates/loading.html')
-        self.response.out.write(template.render(path, {}))
+      if cookieUser:
+        if cookieUser.complete_stage == 1:
+          self.redirect("/signup")
+        if cookieUser.complete_stage == 2:
+          path = os.path.join(os.path.dirname(__file__), 'templates/loading.html')
+          self.response.out.write(template.render(path, {}))
+        else:
+          requestPath = self.request.path
+          logging.info(requestPath)
+          path = os.path.join(os.path.dirname(__file__), 'templates/you.html')
+          self.response.out.write(template.render(path, {'user' : cookieUser, 'path' : requestPath}))
       else:
-        requestPath = self.request.path
-        logging.info(requestPath)
-        path = os.path.join(os.path.dirname(__file__), 'templates/you.html')
-        self.response.out.write(template.render(path, {'user' : cookieUser, 'path' : requestPath}))
+        self.redirect("/logout")
     else:
       path = os.path.join(os.path.dirname(__file__), 'templates/index.html')
       self.response.out.write(template.render(path, {}))
-
-  def post(self):
-      """Handle data posted from main form"""
-      pass
 
 
 class FriendPage(webapp2.RequestHandler):
@@ -289,6 +289,7 @@ def FS_LoadPhoto(photo, currentUser):
     if 'shout' in photo['checkin']:
       newPhoto.shout = photo['checkin']['shout']
   else:
+    newPhoto.fs_venue_only_photo = True
     newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(photo['createdAt'])
   if 'address' in photo['venue']['location']:
     newPhoto.fs_address = photo['venue']['location']['address']
@@ -312,7 +313,9 @@ def FS_LoadPhoto(photo, currentUser):
   newPhoto.photo_url = photo['url']
   newPhoto.width = photo['sizes']['items'][0]['width']
   newPhoto.height = photo['sizes']['items'][0]['height']
-  newPhoto.fs_300 = photo['sizes']['items'][1]['url']
+  newPhoto.med_thumb = photo['sizes']['items'][1]['url']
+  newPhoto.small_thumb = photo['sizes']['items'][2]['url']
+
   return newPhoto
 
 
@@ -321,22 +324,37 @@ class IG_JustPhotos(webapp2.RequestHandler):
     key = self.request.get('key')
     currentUser = User.get_by_key_name(key)
     photoIndx = PhotoIndex(key_name=currentUser.ig_photos)
-    IG_LoadPhotos(currentUser, photoIndx)
+    IG_RecursivePhotoPull(currentUser, photoIndx, None)
     photoIndx.put()
 
 
-def IG_LoadPhotos(currentUser, photoIndx):
-  self_response_url = "https://api.instagram.com/v1/users/self/media/recent/?access_token=%s" % (currentUser.ig_token)
-  self_response_json = urlfetch.fetch(self_response_url, validate_certificate=False)
-  self_response = simplejson.loads(self_response_json.content)
-  logging.info(self_response_url)
+def IG_RecursivePhotoPull(currentUser, photoIndx, max_id):
+  idStart = max_id
+  idEnd = None
+  if max_id == None:
+    photos_url = "https://api.instagram.com/v1/users/self/media/recent/?access_token=%s" % (currentUser.ig_token)
+  else:
+    photos_url = "https://api.instagram.com/v1/users/self/media/recent/?max_id=%s&access_token=%s" % (max_id, currentUser.ig_token)
 
-  for photo in self_response['data']:
+  photos_json = urlfetch.fetch(photos_url, validate_certificate=False)
+  photos_response = simplejson.loads(photos_json.content)
+  logging.info('fetching ' + photos_url)
+
+  for photo in photos_response['data']:
     if photo['location']:
       if 'latitude' in photo['location']:
         newPhoto = IG_AddPhoto(photo)
         newPhoto.put()
         photoIndx.photos.append(newPhoto.key_id)
+    idEnd = photo['id']
+
+  if idEnd:
+    if idStart != idEnd:
+      IG_RecursivePhotoPull(currentUser, photoIndx, idEnd)
+    logging.info("idEnd is " + idEnd)
+  else:
+    logging.info("done")
+
 
 
 def IG_AddPhoto(photo):
@@ -346,7 +364,8 @@ def IG_AddPhoto(photo):
   newPhoto.photo_url = photo['images']['standard_resolution']['url']
   newPhoto.width = photo['images']['standard_resolution']['width']
   newPhoto.height = photo['images']['standard_resolution']['height']
-  newPhoto.fs_300 = photo['images']['low_resolution']['url']
+  newPhoto.med_thumb = photo['images']['low_resolution']['url']
+  newPhoto.small_thumb = photo['images']['thumbnail']['url']
   newPhoto.fs_createdAt = datetime.datetime.fromtimestamp(float(photo['created_time']))
   newPhoto.fs_lat = float(photo['location']['latitude'])
   newPhoto.fs_lng = float(photo['location']['longitude'])
@@ -406,13 +425,13 @@ class FindTrips(webapp2.RequestHandler):
     allPhotos = []
     for photo in currentUser.all_photos:
       allPhotos.append(Photo.get_by_key_name(photo))
-    currentUser.trips = findTripRanges(currentUser, allPhotos, allDatePts)
+    newTrips = findTripRanges(currentUser, allPhotos, allDatePts)
 
     # Loop through and name the trips
-    nameTrips(currentUser.trips, currentUser.homeCity, currentUser.gHomeState, currentUser.gHomeCountry)
+    nameTrips(newTrips, currentUser.homeCity, currentUser.gHomeState, currentUser.gHomeCountry)
 
     # if there are any airports adjacent to a trip, add them to that trip
-    airportJiggle(currentUser.trips)
+    currentUser.trips = airportJiggle(newTrips)
 
     currentUser.complete_stage = 4
     currentUser.put()
@@ -526,7 +545,12 @@ def findTripRanges(currentUser, photos, datePts):
         thisTrip = Trip.get_by_key_name(newTrips[tripIndx])
   thisTrip.put()
 
-  # now loop through and delete trips without photos
+  return cleanUpTrips(newTrips)
+
+
+def cleanUpTrips(newTrips):
+
+  # loop through and delete trips without photos
   tripList = []
   for trip in newTrips:
     thisTrip = Trip.get_by_key_name(trip)
@@ -556,7 +580,6 @@ def findTripRanges(currentUser, photos, datePts):
     else:
       i += 1
 
-  currentUser.put()
   return tripList
 
 
@@ -620,6 +643,8 @@ def nameTrips(trips, homeTown, homeState, homeCountry):
             newCity = False
             thisPhoto.put()
 
+      # lets take another look at this...
+
       # this should only happen if the first photo is at an airport, etc.
       if len(cities) == len(states) == len(countries) == 0:
           google_url = "http://maps.googleapis.com/maps/api/geocode/json?latlng=%s,%s&sensor=false" % (thisTrip.latest_pt.lat, thisTrip.latest_pt.lon)
@@ -641,7 +666,8 @@ def nameTrips(trips, homeTown, homeState, homeCountry):
                   countries.append(component['short_name'])
             if city is None and subCity is not None:
                 cities.append(subCity)
-            if stateShort:
+                city = subCity
+            if stateShort and city:
               combinedCityState = city + ", " + stateShort
               citystate.append(combinedCityState)
             else:
@@ -735,6 +761,8 @@ def airportJiggle(trips):
         firstPhoto.put()
     i += 1
 
+  return cleanUpTrips(trips)
+
 
 def nameify(trip, places):
     title = ""
@@ -786,16 +814,35 @@ class LightboxLoad(webapp2.RequestHandler):
     if cookieValue:
       currentUser = User.get_by_key_name(cookieValue)
       photoID = self.request.get("photo")
-      logging.info(photoID)
       thisPhoto = Photo.get_by_key_name(photoID)
       thisTrip = thisPhoto.trip_parent
-
       logging.info(photoID)
 
-      # memechache
+      tripCache = memcache.get(thisTrip.key().name())
+      if tripCache is not None:
+        logging.info('hey its cached!')
+        self.response.out.write(tripCache)
+      else:
+        logging.info('getting this thing')
+        path = os.path.join(os.path.dirname(__file__), 'templates/tripLightbox.html')
+        tripCache = template.render(path, {'trip' : thisTrip})
 
-      path = os.path.join(os.path.dirname(__file__), 'templates/tripLightbox.html')
-      self.response.out.write(template.render(path, {'trip' : thisTrip, 'currentPhoto' : photoID}))
+        # filter out ongoing, or have ongoing trips expire
+        if thisTrip.ongoing:
+          memcache.add(thisTrip.key().name(), tripCache, 120)
+        else:
+          memcache.add(thisTrip.key().name(), tripCache)
+        self.response.out.write(tripCache)
+
+
+class GetComments(webapp2.RequestHandler):
+  def get(self):
+    photoID = self.request.get("photo")
+    photoID = photoID[1:] # drop the leading 'l'
+    thisPhoto = Photo.get_by_key_name(photoID)
+    logging.info(photoID)
+    path = os.path.join(os.path.dirname(__file__), 'templates/comments.html')
+    self.response.out.write(template.render(path, {'photo' : thisPhoto}))
 
 
 class FriendTripLoad(webapp2.RequestHandler):
@@ -849,6 +896,8 @@ class HidePhoto(webapp2.RequestHandler):
         nameTrips([thisTrip.key().name()], currentUser.homeCity, currentUser.gHomeState, currentUser.gHomeCountry)
 
       thisTrip.put()
+
+      # delete cash for this trip
 
 
 class Friends(webapp2.RequestHandler):
@@ -1030,6 +1079,7 @@ class FreshStart(webapp2.RequestHandler):
 class FreshStartWorker(webapp2.RequestHandler):
     def post(self):
         ######### DANGER! this empties the datastore ##############
+        memcache.flush_all()
         query = db.GqlQuery("SELECT * FROM Photo")
         for q in query:
           db.delete(q)
@@ -1045,6 +1095,11 @@ class FreshStartWorker(webapp2.RequestHandler):
         ############################################################
 
 
+class ClearCache(webapp2.RequestHandler):
+  def get(self):
+    memcache.flush_all()
+
+
 app = webapp2.WSGIApplication([('/', Index,),
                                ('/fs_auth', FS_OAuthRequest),
                                ('/ig_auth', IG_OAuthRequest),
@@ -1057,10 +1112,12 @@ app = webapp2.WSGIApplication([('/', Index,),
                                ('/settings', Settings),
                                ('/freshstart', FreshStart),
                                ('/freshstartworker', FreshStartWorker),
+                               ('/clearCache', ClearCache),
                                ('/tripLoad', TripLoad),
                                ('/friendTripLoad', FriendTripLoad),
                                ('/lightboxLoad', LightboxLoad),
                                ('/findTrips', FindTrips),
+                               ('/getComments', GetComments),
                                ('/hidePhoto', HidePhoto),
                                ('/friends', Friends),
                                ('/merge', MergeIgFs),

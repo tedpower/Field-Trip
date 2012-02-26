@@ -1,15 +1,17 @@
 {% for photo in trip.get_all_photos %}
   {% if not photo.hidden %}
-    <div id="l{{photo.key_id}}" class="lightbox {% ifnotequal photo.key_id currentPhoto %}hidden{% endifnotequal %}">
-      {% ifequal photo.key_id currentPhoto %}
-      <script>currentPhoto = "#l{{ currentPhoto }}";</script>
-      {% endifequal %}
+    <div id="l{{photo.key_id}}" class="lightbox hidden">
       <div class="zoomContentWrap" style="width:{{ photo.width }}px;">
         <div class="zoomContent" style="width:{{ photo.width }}px;">
-          <img src="{{ photo.photo_url }}">
+          <div class="bigWrap" style="height:{{ photo.height }}px;">
+            <img src="{{ photo.photo_url }}">
+            <div class="photoHighlight"></div>
+          </div>
+
           <div class="meta" style="width:{{ photo.width|add:"-40" }}px;">
+            <a href="/hidePhoto?id={{ photo.key_id }}">Hide</a>
             {% if photo.shout %}
-              <div class="shout"><span class="firstname">{{ user.firstName }}:</span> "{{photo.shout}}"</div>
+              <div class="shout"><span class="firstname">{{ photo.trip_parent.user_parent.firstName }} :</span> "{{photo.shout}}"</div>
             {% endif %}
             {% if photo.fs_venue_name and photo.fs_venue_id %}
               <a class="venue" href="https://foursquare.com/v/{{photo.fs_venue_id}}">{{photo.fs_venue_name}}</a>
@@ -23,10 +25,6 @@
             {% else %}
               <div class="date">{{ photo.fs_createdAt|date:"M j, Y" }}</div>
             {% endif %}
-            <a href="/hidePhoto?id={{ photo.key_id }}">Hide</a>
-            {% for comment in photo.get_comments %}
-              <p>{{ comment.name }} : {{ comment.text }}</p>
-            {% endfor %}
           </div>
         </div>
       </div>

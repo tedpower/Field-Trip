@@ -1,4 +1,5 @@
 var currentPhoto = null;
+var currentTrip = null;
 var friendsTab = false;
 var youNext = 0;
 var youDone = false;
@@ -58,25 +59,33 @@ $(document).ready(function(){
 
 $(document).keydown(function(e){
 
- if (e.keyCode == 37) {
+if (e.keyCode == 37) {
   $(currentPhoto).addClass('hidden');
-  prevPhoto = $(currentPhoto).prev().attr('id');
+  if ($(currentPhoto).prev().attr("class") == "lightbox hidden") {
+    prevPhoto = $(currentPhoto).prev().attr('id');
+  } else {
+    prevPhoto = $(currentPhoto).parent().children(":last").attr('id');
+  }
   currentPhoto = "#" + prevPhoto;
   $(currentPhoto).removeClass('hidden');
+  getComments(prevPhoto);
   return false;
+}
 
- }
-
- if (e.keyCode == 39) {
-   if ($(currentPhoto).next().attr('id') != 'end') {
-    $(currentPhoto).addClass('hidden');
+if (e.keyCode == 39) {
+  $(currentPhoto).addClass('hidden');
+  if ($(currentPhoto).next().attr("class") == "lightbox hidden") {
     nextPhoto = $(currentPhoto).next().attr('id');
-    currentPhoto = "#" + nextPhoto;
-    $(currentPhoto).removeClass('hidden');
-    return false;
+  } else {
+    nextPhoto = $(currentPhoto).parent().children(":first").attr('id');
   }
- }
- if (e.keyCode == 27) {
+  currentPhoto = "#" + nextPhoto;
+  $(currentPhoto).removeClass('hidden');
+  getComments(nextPhoto);
+  return false;
+}
+
+if (e.keyCode == 27) {
   closeLightbox();
  }
 });
@@ -105,27 +114,36 @@ function updatePhotos() {
             }
           }
         });
-        currentTrip = youNext - 1;
-        $("#trip" + currentTrip).find(".photo").click(function() {
-          // currentPhoto = "#l" + $(this).attr('id');
-          // $(currentPhoto).removeClass('hidden');
-
-          $.ajax({
-            url: "/lightboxLoad?photo="  + $(this).attr('id'),
-            cache: false,
-            success: function(html){
-              $("#hide").html(html);
-              $('#hide').removeClass('invisible');
-              $('body').addClass('theaterMode');
-            }
-          });
-
+        tripIndx = youNext - 1;
+        $("#trip" + tripIndx).find(".photo").click(function() {
+          var thisPhoto = "l" + $(this).attr('id');
+          currentPhoto = "#l" + $(this).attr('id');
+          console.log(currentPhoto);
+          var thisTrip = $(this).parent().attr('id');
+          if (thisTrip != currentTrip) {
+            $.ajax({
+              url: "/lightboxLoad?photo="  + $(this).attr('id'),
+              cache: false,
+              success: function(html){
+                $("#hide").html(html);
+                $(currentPhoto).removeClass('hidden');
+                $('#hide').removeClass('invisible');
+                $('body').addClass('theaterMode');
+                currentTrip = thisTrip;
+                getComments(thisPhoto);
+              }
+            });
+          }
+          else {
+            $(currentPhoto).removeClass('hidden');
+            $('#hide').removeClass('invisible');
+            $('body').addClass('theaterMode');
+            getComments(thisPhoto);
+          }
         });
+
         $("#hide").click(function() {
-          // $(this).addClass('hidden');
-          // currentPhoto = null;
-          $('#hide').addClass('invisible');
-          $('body').removeClass('theaterMode');
+          closeLightbox();
         });
       }
     }
@@ -182,4 +200,20 @@ function closeLightbox() {
   $('#hide').addClass('invisible');
   $('body').removeClass('theaterMode');
   return false;
+}
+
+function getComments(photoID) {
+  var parent = "#" + photoID;
+  if ($(parent).find(".comments").length == 0) {
+    $(parent).find(".meta").append('<div class="comments"></div>');
+    $.ajax({
+      url: "/getComments?photo="  + photoID,
+      cache: false,
+      success: function(html){
+        $(parent).find(".comments").append(html);
+      }
+    });
+  } else {
+    console.log('already got it');
+  }
 }

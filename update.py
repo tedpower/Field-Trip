@@ -84,19 +84,29 @@ class UpdateAllPhotos(webapp2.RequestHandler):
           point = db.GeoPt(lat=lat,lon=lng)
           datePtsDiff.append((photo.fs_createdAt, point))
 
-        # shouldn't we also add in the start date as a date, plus pt?
+        # also add in the first point
+        datePtsDiff.append((ongoingTrip.start_date, ongoingTrip.start_pt))
 
         # sort geoPts by date, reverse chronological
         datePtsDiff = sorted(datePtsDiff, key=itemgetter(0), reverse=True)
 
+        logging.info('before find trip ranges')
+        logging.info(photoDiff)
+        logging.info(datePtsDiff)
+
         tripDiff = main.findTripRanges(user, photoDiff, datePtsDiff)
+
+        logging.info('after...')
+        logging.info(tripDiff)
 
         # Loop through and name the trips
         main.nameTrips(tripDiff, user.homeCity, user.gHomeState, user.gHomeCountry)
 
         # if there are any airports adjacent to a trip, add them to that trip
-        main.airportJiggle(tripDiff)
+        tripDiff = main.airportJiggle(tripDiff)
 
+        logging.info('and then...')
+        logging.info(tripDiff)
 
         # pop the old ongoing trip from the trip list and replace it with these trips
         user.trips = user.trips[1:]

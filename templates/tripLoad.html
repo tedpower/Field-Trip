@@ -43,7 +43,7 @@
     <div class="tripPhotos clearfix" id="trip{{ next|add:"-1" }}">
       {% for photo in trip.get_all_photos %}
         {% if not photo.hidden %}
-          <div id="{{photo.key_id}}" class="photo home" style="background-image:url({{ photo.fs_300 }})"></div>
+          <div id="{{photo.key_id}}" class="photo" style="background-image:url({{ photo.med_thumb }})"></div>
         {% endif %}
       {% endfor %}
     </div>
