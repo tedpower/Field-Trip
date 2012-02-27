@@ -1,4 +1,4 @@
-{% if trip.get_all_photos %}
+{% if trip.get_all_photos|length > 0 %}
   <div class="meTrip">
     {% if trip.home %}
       <h2>Home in {{ trip.title }}</h2>
@@ -43,7 +43,7 @@
     <div class="tripPhotos clearfix" id="trip{{ next|add:"-1" }}">
       {% for photo in trip.get_all_photos %}
         {% if not photo.hidden %}
-          <div id="{{photo.key_id}}" class="photo" style="background-image:url({{ photo.med_thumb }})"></div>
+          <div id="y_{{photo.key_id}}" class="photo" style="background-image:url({{ photo.med_thumb }})"></div>
         {% endif %}
       {% endfor %}
     </div>

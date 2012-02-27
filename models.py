@@ -29,8 +29,8 @@ class User(db.Model):
     radius = db.IntegerProperty(default=30)
     fs_profilePic = db.StringProperty()
     # photoCount = db.IntegerProperty()
-    trips = db.StringListProperty()
-    friends_trips = db.StringListProperty()
+    trips = db.ListProperty(db.Key)
+    friends_trips = db.ListProperty(db.Key)
     twitter = db.StringProperty()
     last_updated = db.DateTimeProperty(auto_now_add=True)
     complete_stage = db.IntegerProperty()
@@ -48,13 +48,6 @@ class User(db.Model):
             return PhotoIndex.get_by_key_name(self.ig_photos)
         else:
             return None
-
-    @property
-    def get_all_trips(self):
-        listOfTrips = []
-        for tripKey in self.trips:
-            listOfTrips.append(Trip.get_by_key_name(tripKey))
-        return listOfTrips
 
 
 class PhotoIndex(db.Model):
@@ -156,10 +149,7 @@ class Trip(db.Model):
                     listOfPhotos.append(thisPhoto)
         if self.home is False and self.ongoing is False:
             listOfPhotos.reverse()
-        if len(listOfPhotos) == 0:
-            return False
-        else:
-            return listOfPhotos
+        return listOfPhotos
 
     @property
     def get_photos_mini(self):

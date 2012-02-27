@@ -68,7 +68,8 @@ if (e.keyCode == 37) {
   }
   currentPhoto = "#" + prevPhoto;
   $(currentPhoto).removeClass('hidden');
-  getComments(prevPhoto);
+  var photoID = prevPhoto.substring(2);
+  getComments(photoID);
   return false;
 }
 
@@ -81,7 +82,8 @@ if (e.keyCode == 39) {
   }
   currentPhoto = "#" + nextPhoto;
   $(currentPhoto).removeClass('hidden');
-  getComments(nextPhoto);
+  var photoID = nextPhoto.substring(2);
+  getComments(photoID);
   return false;
 }
 
@@ -116,13 +118,14 @@ function updatePhotos() {
         });
         tripIndx = youNext - 1;
         $("#trip" + tripIndx).find(".photo").click(function() {
-          var thisPhoto = "l" + $(this).attr('id');
-          currentPhoto = "#l" + $(this).attr('id');
+          var photoID = $(this).attr('id');
+          photoID = photoID.substring(2);
+          currentPhoto = "#l_" + photoID;
           console.log(currentPhoto);
           var thisTrip = $(this).parent().attr('id');
           if (thisTrip != currentTrip) {
             $.ajax({
-              url: "/lightboxLoad?photo="  + $(this).attr('id'),
+              url: "/lightboxLoad?photo="  + photoID,
               cache: false,
               success: function(html){
                 $("#hide").html(html);
@@ -130,7 +133,7 @@ function updatePhotos() {
                 $('#hide').removeClass('invisible');
                 $('body').addClass('theaterMode');
                 currentTrip = thisTrip;
-                getComments(thisPhoto);
+                getComments(photoID);
               }
             });
           }
@@ -138,7 +141,7 @@ function updatePhotos() {
             $(currentPhoto).removeClass('hidden');
             $('#hide').removeClass('invisible');
             $('body').addClass('theaterMode');
-            getComments(thisPhoto);
+            getComments(photoID);
           }
         });
 
@@ -203,7 +206,7 @@ function closeLightbox() {
 }
 
 function getComments(photoID) {
-  var parent = "#" + photoID;
+  var parent = "#l_" + photoID;
   if ($(parent).find(".comments").length == 0) {
     $(parent).find(".meta").append('<div class="comments"></div>');
     $.ajax({
@@ -213,7 +216,5 @@ function getComments(photoID) {
         $(parent).find(".comments").append(html);
       }
     });
-  } else {
-    console.log('already got it');
   }
 }

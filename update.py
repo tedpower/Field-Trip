@@ -66,7 +66,7 @@ class UpdateAllPhotos(webapp2.RequestHandler):
       if len(photoDiff) > 0 or len(datePtsDiff) > 0:
 
         # load in the ongoing trip photos
-        ongoingTrip = Trip.get_by_key_name(user.trips[0])
+        ongoingTrip = Trip.get(user.trips[0])
         logging.info('starting with ongoing trip ' + user.trips[0])
         for photoKey in ongoingTrip.photos:
           photoDiff.append(Photo.get_by_key_name(photoKey))
@@ -251,15 +251,15 @@ class UpdateFriendTrips(webapp2.RequestHandler):
     for user in allUsers:
       allTripsList = [];
       for friendKey in user.all_friends:
-        friend = User.get_by_key_name(friendKey)
+        friend = User.get(friendKey)
         for tripKey in friend.trips:
-          trip = Trip.get_by_key_name(tripKey)
+          trip = Trip.get(tripKey)
           if trip.photos:
             latestPhoto = Photo.get_by_key_name(trip.photos[0])
             allTripsList.append((tripKey, latestPhoto.fs_createdAt))
 
       for tripKey in user.trips:
-        trip = Trip.get_by_key_name(tripKey)
+        trip = Trip.get(tripKey)
         if trip.photos:
           latestPhoto = Photo.get_by_key_name(trip.photos[0])
           allTripsList.append((tripKey, latestPhoto.fs_createdAt))
@@ -282,13 +282,13 @@ class UpdateFriendTrips(webapp2.RequestHandler):
       for friendKey in currentUser.all_friends:
         friend = User.get_by_key_name(friendKey)
         for tripKey in friend.trips:
-          trip = Trip.get_by_key_name(tripKey)
+          trip = Trip.get(tripKey)
           if trip.photos:
             latestPhoto = Photo.get_by_key_name(trip.photos[0])
             allTripsList.append((tripKey, latestPhoto.fs_createdAt))
 
       for tripKey in currentUser.trips:
-        trip = Trip.get_by_key_name(tripKey)
+        trip = Trip.get(tripKey)
         if trip.photos:
           latestPhoto = Photo.get_by_key_name(trip.photos[0])
           allTripsList.append((tripKey, latestPhoto.fs_createdAt))

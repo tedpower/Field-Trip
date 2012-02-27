@@ -351,7 +351,7 @@ def IG_RecursivePhotoPull(currentUser, photoIndx, max_id):
   if idEnd:
     if idStart != idEnd:
       IG_RecursivePhotoPull(currentUser, photoIndx, idEnd)
-    logging.info("idEnd is " + idEnd)
+      logging.info("idEnd is " + idEnd)
   else:
     logging.info("done")
 
@@ -461,9 +461,7 @@ def getDatePts(currentUser, index, allDatePts):
 
 def findTripRanges(currentUser, photos, datePts):
   currentTime = datePts[0][0]
-  tripKey = "f" + currentUser.fs_id + "d" + str(int(time.mktime(currentTime.timetuple())))
-  currentTrip = Trip(key_name=tripKey)
-  currentTrip.key_id = tripKey
+  currentTrip = Trip()
   currentTrip.user_parent = currentUser.key()
   currentTrip.ongoing = True
   currentTrip.latest_pt = datePts[0][1]
@@ -488,11 +486,9 @@ def findTripRanges(currentUser, photos, datePts):
       currentTrip.start_date = prevCheckinDate
       currentTrip.start_pt = prevCheckinPt
       currentTrip.put()
-      newTrips.append(currentTrip.key().name())
+      newTrips.append(currentTrip.key())
       currentTime = datePts[i][0]
-      tripKey = "f" + currentUser.fs_id + "d" + str(int(time.mktime(currentTime.timetuple())))
-      currentTrip = Trip(key_name=tripKey)
-      currentTrip.key_id = tripKey
+      currentTrip = Trip()
       currentTrip.user_parent = currentUser.key()
       currentTrip.end_date = datePts[i][0]
       currentTrip.latest_pt = datePts[i][1]
@@ -502,12 +498,10 @@ def findTripRanges(currentUser, photos, datePts):
       currentTrip.start_date = prevCheckinDate
       currentTrip.start_pt = prevCheckinPt
       currentTrip.put()
-      newTrips.append(currentTrip.key().name())
+      newTrips.append(currentTrip.key())
       # Start a new trip at home
       currentTime = datePts[i][0]
-      tripKey = "f" + currentUser.fs_id + "d" + str(int(time.mktime(currentTime.timetuple())))
-      currentTrip = Trip(key_name=tripKey)
-      currentTrip.key_id = tripKey
+      currentTrip = Trip()
       currentTrip.user_parent = currentUser.key()
       currentTrip.end_date = datePts[i][0]
       currentTrip.latest_pt = datePts[i][1]
@@ -518,12 +512,12 @@ def findTripRanges(currentUser, photos, datePts):
   # add the first trip
   currentTrip.start_date = prevCheckinDate
   currentTrip.start_pt = prevCheckinPt
-  newTrips.append(currentTrip.key().name())
   currentTrip.put()
+  newTrips.append(currentTrip.key())
 
   # now add the photos to the trips
   tripIndx = 0
-  thisTrip = Trip.get_by_key_name(newTrips[tripIndx])
+  thisTrip = Trip.get(newTrips[tripIndx])
   for photo in photos:
     notAdded = True
     while notAdded:
@@ -542,7 +536,7 @@ def findTripRanges(currentUser, photos, datePts):
       else:
         thisTrip.put()
         tripIndx += 1
-        thisTrip = Trip.get_by_key_name(newTrips[tripIndx])
+        thisTrip = Trip.get(newTrips[tripIndx])
   thisTrip.put()
 
   return cleanUpTrips(newTrips)
@@ -553,7 +547,7 @@ def cleanUpTrips(newTrips):
   # loop through and delete trips without photos
   tripList = []
   for trip in newTrips:
-    thisTrip = Trip.get_by_key_name(trip)
+    thisTrip = Trip.get(trip)
     if not thisTrip.photos and not thisTrip.ongoing:
       thisTrip.delete()
     else:
@@ -562,8 +556,8 @@ def cleanUpTrips(newTrips):
   # collapse consecutive @home trips
   i = 0
   while i < (len(tripList) - 1):
-    thisTrip = Trip.get_by_key_name(tripList[i])
-    prevTrip = Trip.get_by_key_name(tripList[i+1])
+    thisTrip = Trip.get(tripList[i])
+    prevTrip = Trip.get(tripList[i+1])
     if thisTrip.home == True and prevTrip.home == True:
       thisTrip.photos.extend(prevTrip.photos)
       thisTrip.start_date = prevTrip.start_date
@@ -580,12 +574,21 @@ def cleanUpTrips(newTrips):
     else:
       i += 1
 
+  # cache the trips
+  for trip in tripList:
+    thisTrip = Trip.get(trip)
+    path = os.path.join(os.path.dirname(__file__), 'templates/tripLightbox.html')
+    logging.info('id isssss ' + str(thisTrip.key().id()))
+    tripCache = template.render(path, {'trip' : thisTrip})
+    memcache.delete(str(thisTrip.key().id()))
+    memcache.add(str(thisTrip.key().id()), tripCache)
+
   return tripList
 
 
 def nameTrips(trips, homeTown, homeState, homeCountry):
   for trip in trips:
-    thisTrip = Trip.get_by_key_name(trip)
+    thisTrip = Trip.get(trip)
     if thisTrip.home == False:
       cities = []
       countries = []
@@ -727,8 +730,8 @@ def airportJiggle(trips):
   allTrips = len(trips)
   i = 0
   while i < (allTrips - 1):
-    thisTrip = Trip.get_by_key_name(trips[i])
-    prevTrip = Trip.get_by_key_name(trips[i+1])
+    thisTrip = Trip.get(trips[i])
+    prevTrip = Trip.get(trips[i+1])
     if thisTrip.home and not prevTrip.home and len(thisTrip.photos) > 0:
       lastPhoto = Photo.get_by_key_name(thisTrip.photos[-1])
       if lastPhoto.cat_id == '4bf58dd8d48988d1ed931735' or lastPhoto.cat_id == '4bf58dd8d48988d1eb931735':
@@ -791,12 +794,11 @@ class TripLoad(webapp2.RequestHandler):
       currentUser = User.get_by_key_name(cookieValue)
       startAt = int(self.request.get("startAt"))
       if len(currentUser.trips) > startAt:
-        thisTrip = Trip.get_by_key_name(currentUser.trips[startAt])
+        thisTrip = Trip.get(currentUser.trips[startAt])
         while not thisTrip.photos:
           startAt += 1
-          thisTrip = Trip.get_by_key_name(currentUser.trips[startAt])
+          thisTrip = Trip.get(currentUser.trips[startAt])
         logging.info(thisTrip.title)
-        logging.info(thisTrip.key_id)
         path = os.path.join(os.path.dirname(__file__), 'templates/tripLoad.html')
         currentTime = datetime.datetime.now()
         self.response.out.write(template.render(path, {'trip' : thisTrip, 'next' : startAt + 1, 'currentTime' : currentTime}))
@@ -818,7 +820,7 @@ class LightboxLoad(webapp2.RequestHandler):
       thisTrip = thisPhoto.trip_parent
       logging.info(photoID)
 
-      tripCache = memcache.get(thisTrip.key().name())
+      tripCache = memcache.get(str(thisTrip.key().id()))
       if tripCache is not None:
         logging.info('hey its cached!')
         self.response.out.write(tripCache)
@@ -826,19 +828,13 @@ class LightboxLoad(webapp2.RequestHandler):
         logging.info('getting this thing')
         path = os.path.join(os.path.dirname(__file__), 'templates/tripLightbox.html')
         tripCache = template.render(path, {'trip' : thisTrip})
-
-        # filter out ongoing, or have ongoing trips expire
-        if thisTrip.ongoing:
-          memcache.add(thisTrip.key().name(), tripCache, 120)
-        else:
-          memcache.add(thisTrip.key().name(), tripCache)
+        memcache.add(str(thisTrip.key().id()), tripCache)
         self.response.out.write(tripCache)
 
 
 class GetComments(webapp2.RequestHandler):
   def get(self):
     photoID = self.request.get("photo")
-    photoID = photoID[1:] # drop the leading 'l'
     thisPhoto = Photo.get_by_key_name(photoID)
     logging.info(photoID)
     path = os.path.join(os.path.dirname(__file__), 'templates/comments.html')
@@ -856,10 +852,10 @@ class FriendTripLoad(webapp2.RequestHandler):
       currentUser = User.get_by_key_name(cookieValue)
       startAt = int(self.request.get("startAt"))
       if len(currentUser.friends_trips) > startAt:
-        thisTrip = Trip.get_by_key_name(currentUser.friends_trips[startAt])
+        thisTrip = Trip.get(currentUser.friends_trips[startAt])
         while not thisTrip.photos:
           startAt += 1
-          thisTrip = Trip.get_by_key_name(currentUser.friends_trips[startAt])
+          thisTrip = Trip.get(currentUser.friends_trips[startAt])
         logging.info(thisTrip.title)
         logging.info(thisTrip.key_id)
         path = os.path.join(os.path.dirname(__file__), 'templates/friendTripLoad.html')
