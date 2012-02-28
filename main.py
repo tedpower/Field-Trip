@@ -676,12 +676,12 @@ def nameTrips(trips, homeTown, homeState, homeCountry):
             else:
               citystate.append(newCity)
 
-      logging.info("------------------------------------------")
+      logging.info("----------------------------------------")
       logging.info(cities)
       logging.info(states)
       logging.info(citystate)
       logging.info(countries)
-      logging.info("------------------------------------------")
+      logging.info("----------------------------------------")
 
       if len(countries) > 1:
         countries.reverse()
@@ -857,7 +857,6 @@ class FriendTripLoad(webapp2.RequestHandler):
           startAt += 1
           thisTrip = Trip.get(currentUser.friends_trips[startAt])
         logging.info(thisTrip.title)
-        logging.info(thisTrip.key_id)
         path = os.path.join(os.path.dirname(__file__), 'templates/friendTripLoad.html')
         currentTime = datetime.datetime.now()
         self.response.out.write(template.render(path, {'trip' : thisTrip, 'next' : startAt + 1, 'currentTime' : currentTime}))

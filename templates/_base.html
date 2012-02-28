@@ -31,14 +31,14 @@
 
 <div id="top">
 <h1>FIELD TRIP</h1>
-  <a href="/friends" id="friends"
-  {% ifequal path '/friends' %}
+  <a href="/" id="friends"
+  {% ifequal path '/' %}
     class="selected"
   {% endifequal %}
   >Friends</a>
   &nbsp;·&nbsp;
-  <a href="/" id="you"
-  {% ifequal path '/' %}
+  <a href="/you" id="you"
+  {% ifequal path '/you' %}
     class="selected"
   {% endifequal %}
   >You</a>

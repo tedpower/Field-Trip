@@ -67,7 +67,7 @@ class UpdateAllPhotos(webapp2.RequestHandler):
 
         # load in the ongoing trip photos
         ongoingTrip = Trip.get(user.trips[0])
-        logging.info('starting with ongoing trip ' + user.trips[0])
+        # logging.info('starting with ongoing trip ' + user.trips[0])
         for photoKey in ongoingTrip.photos:
           photoDiff.append(Photo.get_by_key_name(photoKey))
 
@@ -113,9 +113,9 @@ class UpdateAllPhotos(webapp2.RequestHandler):
 
         tripDiff.reverse()
         for trip in tripDiff:
-          logging.info('adding trip ' + trip)
+          # logging.info('adding trip ' + trip)
           user.trips.insert(0, trip)
-        logging.info('ending with ongoing trip ' + user.trips[0])
+        # logging.info('ending with ongoing trip ' + user.trips[0])
 
       # logging.info(datetime.datetime.now())
       # logging.info(user.last_updated)
@@ -251,7 +251,7 @@ class UpdateFriendTrips(webapp2.RequestHandler):
     for user in allUsers:
       allTripsList = [];
       for friendKey in user.all_friends:
-        friend = User.get(friendKey)
+        friend = User.get_by_key_name(friendKey)
         for tripKey in friend.trips:
           trip = Trip.get(tripKey)
           if trip.photos:

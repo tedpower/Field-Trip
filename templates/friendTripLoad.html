@@ -48,18 +48,20 @@
         {% endif %}
       </div>
     </div>
-    <div class="clearfix" id="trip{{ next|add:"-1" }}">
+    <div class="clearfix" id="f_trip{{ next|add:"-1" }}">
 
       {% if trip.count == 1 %}
-        <div class="heroFPhoto
-        {% if trip.get_photos_mini.0.width > trip.get_photos_mini.0.height %}
-          landscape
-        {% endif %}"
-        style="background-image:url('{{ trip.get_photos_mini.0.photo_url }}');"></div>
+        <div id="f_{{trip.get_photos_mini.0.key_id}}" class="f_photo">
+          <div class="heroFPhoto
+          {% if trip.get_photos_mini.0.width > trip.get_photos_mini.0.height %}
+            landscape
+          {% endif %}"
+          style="background-image:url('{{ trip.get_photos_mini.0.photo_url }}');"></div>
+        </div>
       {% endif %}
       {% if trip.count == 2 %}
-        <img src="{{ trip.get_photos_mini.0.med_thumb }}" class="mThumbFPhoto">
-        <img src="{{ trip.get_photos_mini.1.med_thumb }}" class="mThumbFPhoto">
+        <img id="f_{{trip.get_photos_mini.0.key_id}}" src="{{ trip.get_photos_mini.0.med_thumb }}" class="mThumbFPhoto f_photo">
+        <img id="f_{{trip.get_photos_mini.1.key_id}}" src="{{ trip.get_photos_mini.1.med_thumb }}" class="mThumbFPhoto f_photo">
       {% endif %}
       {% if trip.count == 3 %}
         <div class="shortHeroFPhoto
