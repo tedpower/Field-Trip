@@ -1,21 +1,16 @@
 {% extends "_base.html" %}
 {% block bodycontent %}
 
-<div class="face">
-  <div id="friendPhotos">
-    <div id="friendAjax" class="clearfix">
-      <div id="leftCol"></div>
-      <div id="rightCol"></div>
-    </div>
-    <div id="friendLoading" style="display:none">Loading...</div>
+<div id="friendPhotos">
+  <div id="friendAjax" class="clearfix">
+    <div id="leftCol"></div>
+    <div id="rightCol"></div>
   </div>
 </div>
 
-<div id="back" class="face">
-  <div id="photos">
-    <div id="ajax"></div>
-    <div id="loading" style="display:none">Loading...</div>
-  </div>
+<div id="photos" style="display:none;">
+  <div id="ajax"></div>
+  <div id="loading" style="display:none">Loading...</div>
 </div>
 
 {% endblock %}

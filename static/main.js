@@ -27,7 +27,8 @@ $(document).ready(function(){
   $('#friends').click(function() {
     $('#friends').addClass('selected');
     $('#you').removeClass('selected');
-    $('#photoWrap').removeClass('flipped');
+    $('#friendPhotos').css({'display':'block'});
+    $('#photos').css({'display':'none'});
     friendsTab = true;
     updateLine();
     updateFriendPhotos();
@@ -37,7 +38,8 @@ $(document).ready(function(){
   $('#you').click(function() {
     $('#you').addClass('selected');
     $('#friends').removeClass('selected');
-    $('#photoWrap').addClass('flipped');
+    $('#friendPhotos').css({'display':'none'});
+    $('#photos').css({'display':'block'});
     friendsTab = false;
     updateLine();
     return false;
@@ -122,7 +124,8 @@ function updatePhotos() {
           }
         });
         tripIndx = youNext - 1;
-        $("#trip" + tripIndx).find(".photo").click(function() {
+        $("#y_trip" + tripIndx).find(".y_photo").click(function() {
+          console.log('click you trip');
           var photoID = $(this).attr('id');
           photoID = photoID.substring(2);
           currentPhoto = "#l_" + photoID;
@@ -161,7 +164,6 @@ function updateFriendPhotos() {
     if ($(window).scrollTop() >= $("#friendPhotos").height() - $(window).height() - 1000) {
       friendHasRun = true;
       if (!friendDone) {
-        // $("#friendLoading").toggle();
         updateLine();
         $.ajax({
           url: "/friendTripLoad?startAt="  + friendNext,
@@ -175,7 +177,6 @@ function updateFriendPhotos() {
             friendHasRun = false;
             friendNext = friendNext + 1;
             updateLine();
-            // $("#friendLoading").toggle();
             if ($(window).scrollTop() >= $("#friendPhotos").height() - $(window).height() - 1000) {
               updateFriendPhotos();
             } else {
@@ -234,6 +235,7 @@ function updateLine() {
     $('#bgHack').height($("#photos").height());
   }
 }
+
 
 function closeLightbox() {
   $(currentPhoto).addClass('hidden');

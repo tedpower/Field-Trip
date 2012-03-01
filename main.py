@@ -583,6 +583,8 @@ def cleanUpTrips(newTrips):
     memcache.delete(str(thisTrip.key().id()))
     memcache.add(str(thisTrip.key().id()), tripCache)
 
+    # store the friendtrip version, me version, and lb version
+
   return tripList
 
 

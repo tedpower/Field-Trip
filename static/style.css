@@ -132,15 +132,6 @@ color: #666666;
     border-right: 4px solid #CCCCCC;
 }
 
-#bgHack {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    background-color: #F1F1F1;
-    z-index: -2;
-}
-
 /* Logged In Body ---------- */
 
 #photoWrap {
@@ -160,38 +151,17 @@ color: #666666;
          -o-transition: -o-transform      750ms cubic-bezier(0.330, 0.320, 0.595, 1.320);
             transition: transform         750ms cubic-bezier(0.330, 0.320, 0.595, 1.320); /* custom */
 
-    -webkit-backface-visibility: hidden;
-       -moz-backface-visibility: hidden;
-        -ms-backface-visibility: hidden;
-}
-
-.face {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    -webkit-backface-visibility: hidden;
-    -moz-backface-visibility:    hidden;
-    -ms-backface-visibility:     hidden;
-}
-
-#back {
-    -webkit-transform: rotateY(180deg);
-    -moz-transform: rotateY(180deg);
-    transform: rotateY(180deg);
-}
-
-.flipped {
-    -webkit-transform: rotateY(180deg);
-    -moz-transform: rotateY(180deg);
-    transform: rotateY(180deg);
 }
 
 #photos, #friendPhotos {
   text-align: left;
   width: 920px;
-  padding: 150px 0 30px 0;
+  padding: 145px 0 30px 0;
   margin: 0 auto;
+  position: absolute;
+  top:0;
+  left:0;
+  right:0;
 }
 
 #leftCol {
@@ -202,18 +172,20 @@ color: #666666;
   float: right;
 }
 
-.photo:hover {
+.y_photo:hover {
     cursor: pointer;
 }
 
-.photo {
+.f_photo:hover {
+    cursor: pointer;
+}
+
+.y_photo {
   margin: 0 4px 4px 0;
   width: 197px;
   height: 197px;
   float: left;
   -webkit-transition: all 300ms;
-  background-size: auto 197px;
-  background-repeat: no-repeat;
   background-color: #ECEEF0;
 }
 
@@ -528,10 +500,7 @@ color: #666666;
     height: 380px;
     margin: 4px 4px 0 0;
     float: left;
-    background-color: #ECEEF0;
-    background-size: 380px auto;
-    background-repeat: no-repeat;
-    background-position: center center;
+    overflow: hidden;
 }
 
 .shortHeroFPhoto {
@@ -539,14 +508,15 @@ color: #666666;
     height: 188px;
     margin: 4px 4px 0 0;
     float: left;
-    background-color: #ECEEF0;
-    background-size: 380px auto;
-    background-repeat: no-repeat;
-    background-position: center center;
+    overflow: hidden;
 }
 
 .landscape {
-  background-size: auto 380px;
+  height: 380px;
+}
+
+.portrait {
+  width: 380px;
 }
 
 .moreCount {

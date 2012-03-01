@@ -40,10 +40,10 @@
         {% endifequal %}
       </div>
     {% endif %}
-    <div class="tripPhotos clearfix" id="trip{{ next|add:"-1" }}">
+    <div class="tripPhotos clearfix" id="y_trip{{ next|add:"-1" }}">
       {% for photo in trip.get_all_photos %}
         {% if not photo.hidden %}
-          <div id="y_{{photo.key_id}}" class="photo" style="background-image:url({{ photo.med_thumb }})"></div>
+          <img src="{{ photo.med_thumb }}" id="y_{{photo.key_id}}" class="y_photo" />
         {% endif %}
       {% endfor %}
     </div>

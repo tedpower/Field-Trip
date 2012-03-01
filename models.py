@@ -1,3 +1,4 @@
+from __future__ import division
 from google.appengine.ext import db
 import datetime
 from django.utils import simplejson
@@ -81,6 +82,41 @@ class Photo(db.Model):
     hearted = db.StringListProperty()
     hidden = db.BooleanProperty(default=False)
     trip_parent = db.ReferenceProperty()
+
+    @property
+    def get_orientation(self):
+        if self.width >= self.height:
+            return "landscape"
+        else:
+            return "portrait"
+
+
+    @property
+    def get_offset(self):
+        side = 380
+        if self.width == self.height:
+            return ""
+        elif self.width > self.height:
+            multiplier = self.width / self.height
+            resizedWidth = multiplier * side
+            offset = (resizedWidth - side) / 2
+            return "margin-left: -" + str(int(offset)) + "px;"
+        else:
+            multiplier = self.height / self.width
+            resizedHeight = multiplier * side
+            offset = (resizedHeight - side) / 2
+            return "margin-top: -" + str(int(offset)) + "px;"
+
+
+    @property
+    def get_short_offset(self):
+        widthSide = 380
+        heightSide = 188
+        multiplier = self.height / self.width
+        resizedHeight = multiplier * widthSide
+        offset = (resizedHeight - heightSide) / 2
+        return "margin-top: -" + str(int(offset)) + "px;"
+
 
     @property
     def get_comments(self):
