@@ -82,6 +82,8 @@ class Photo(db.Model):
     hearted = db.StringListProperty()
     hidden = db.BooleanProperty(default=False)
     trip_parent = db.ReferenceProperty()
+    next = db.SelfReferenceProperty()
+    trip_indx = db.IntegerProperty()
 
     @property
     def get_orientation(self):
@@ -89,7 +91,6 @@ class Photo(db.Model):
             return "landscape"
         else:
             return "portrait"
-
 
     @property
     def get_offset(self):
@@ -107,7 +108,6 @@ class Photo(db.Model):
             offset = (resizedHeight - side) / 2
             return "margin-top: -" + str(int(offset)) + "px;"
 
-
     @property
     def get_short_offset(self):
         widthSide = 380
@@ -120,8 +120,9 @@ class Photo(db.Model):
 
     @property
     def get_comments(self):
-
+        logging.info('testtttttttttt')
         commentList = []
+
         if self.fs_venue_only_photo:
             return commentList
 
@@ -160,6 +161,51 @@ class Photo(db.Model):
 
         return commentList
 
+
+    @property
+    def get_like_count(self):
+        logging.info('2 testtttttttttt')
+        likeCount = 0
+
+        if self.fs_venue_only_photo or self.fs_checkin_id:
+            return commentList
+        else:
+            thisUser = self.trip_parent.user_parent
+            comments_url = "https://api.instagram.com/v1/media/%s?access_token=%s" % (self.key_id, thisUser.ig_token)
+            comments_json = urlfetch.fetch(comments_url, validate_certificate=False, deadline=10)
+            comments_response = simplejson.loads(comments_json.content)
+
+            likes = comments_response['data']['likes']
+            likeCount = likes['count']
+
+        return likeCount
+
+    @property
+    def get_likes(self):
+        logging.info('2 testtttttttttt')
+        likeList = []
+        likeCount = 0
+
+        if self.fs_venue_only_photo or self.fs_checkin_id:
+            return likeList
+        else:
+            thisUser = self.trip_parent.user_parent
+            comments_url = "https://api.instagram.com/v1/media/%s?access_token=%s" % (self.key_id, thisUser.ig_token)
+            comments_json = urlfetch.fetch(comments_url, validate_certificate=False, deadline=10)
+            comments_response = simplejson.loads(comments_json.content)
+
+            likes = comments_response['data']['likes']
+            likeCount = likes['count']
+
+            if 5 > likeCount > 0:
+                for like in likes['data']:
+                    name = like['username']
+                    photo = like['profile_picture']
+                    likeList.append({'name':name, 'photo':photo})
+
+        return likeList
+
+
 class Trip(db.Model):
     # key is the checkin id of the first checkin
     key_id = db.StringProperty()
@@ -173,6 +219,36 @@ class Trip(db.Model):
     ongoing = db.BooleanProperty(default=False)
     home = db.BooleanProperty()
     count = db.IntegerProperty(default=0)
+
+    @property
+    def get_date_range(self):
+      logging.info('is this working?')
+      currentTime = datetime.datetime.now()
+      if currentTime.year == self.start_date.year:
+        if self.end_date:
+          if self.start_date.date() == self.end_date.date():
+            return self.start_date.strftime("%b %d").replace(' 0', ' ')
+          elif self.start_date.month == self.end_date.month:
+            return self.start_date.strftime("%b %d").replace(' 0', ' ') + " - " + self.end_date.strftime("%d").lstrip('0')
+          else:
+            return self.start_date.strftime("%b %d").replace(' 0', ' ') + " - " + self.end_date.strftime("%b %d").replace(' 0', ' ')
+        else:
+          return self.start_date.strftime("%b %d").replace(' 0', ' ') # since...
+      else:
+        if self.end_date:
+          if self.start_date.date() == self.end_date.date():
+            return self.start_date.strftime("%b %d, %Y").replace(' 0', ' ')
+          if self.start_date.year == self.end_date.year:
+            if self.start_date.month == self.end_date.month:
+              return self.start_date.strftime("%b %d").replace(' 0', ' ') + " - " + self.end_date.strftime("%d, %Y").lstrip('0')
+            else:
+              return self.start_date.strftime("%b %d").replace(' 0', ' ') + " - " + self.end_date.strftime("%b %d, %Y").replace(' 0', ' ')
+          else:
+            return self.start_date.strftime("%b %d, %Y").replace(' 0', ' ') + " - " + self.end_date.strftime("%b %d, %Y").replace(' 0', ' ')
+        else:
+          return self.start_date.strftime("%b %d, %Y").replace(' 0', ' ') # since...
+
+
 
     @property
     def get_all_photos(self):

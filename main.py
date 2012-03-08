@@ -539,10 +539,12 @@ def findTripRanges(currentUser, photos, datePts):
         thisTrip = Trip.get(newTrips[tripIndx])
   thisTrip.put()
 
-  return cleanUpTrips(newTrips)
+  return cleanTrips(newTrips)
 
 
-def cleanUpTrips(newTrips):
+def cleanTrips(newTrips):
+
+  logging.info('running a clean Up')
 
   # loop through and delete trips without photos
   tripList = []
@@ -574,18 +576,43 @@ def cleanUpTrips(newTrips):
     else:
       i += 1
 
+  return tripList
+
+def polishTrips(tripList):
+
+  # this is innefficient, make sure we only do this once
+  for trip in tripList:
+    thisTrip = Trip.get(trip)
+    i = 0
+    if thisTrip.photos:
+      photoList = []
+      photoList.extend(thisTrip.photos)
+      photoList.reverse()
+      if len(photoList) > 1:
+        while i < (len(photoList) - 1):
+          thisPhoto = Photo.get_by_key_name(photoList[i])
+          nextPhoto = Photo.get_by_key_name(photoList[i+1])
+          thisPhoto.next = nextPhoto.key()
+          thisPhoto.trip_indx = i + 1
+          thisPhoto.put()
+          i += 1
+        nextPhoto.trip_indx = i + 1
+        nextPhoto.put()
+      elif len(photoList) == 1:
+        thisPhoto = Photo.get_by_key_name(photoList[0])
+        thisPhoto.trip_indx = 1
+        thisPhoto.put()
+
   # cache the trips
   for trip in tripList:
     thisTrip = Trip.get(trip)
+    memcacheID = str(thisTrip.key().id())
     path = os.path.join(os.path.dirname(__file__), 'templates/tripLightbox.html')
-    logging.info('id isssss ' + str(thisTrip.key().id()))
     tripCache = template.render(path, {'trip' : thisTrip})
-    memcache.delete(str(thisTrip.key().id()))
-    memcache.add(str(thisTrip.key().id()), tripCache)
+    memcache.delete("l_" + memcacheID)
+    memcache.add("l_" + memcacheID, tripCache)
 
     # store the friendtrip version, me version, and lb version
-
-  return tripList
 
 
 def nameTrips(trips, homeTown, homeState, homeCountry):
@@ -766,7 +793,9 @@ def airportJiggle(trips):
         firstPhoto.put()
     i += 1
 
-  return cleanUpTrips(trips)
+  trips = cleanTrips(trips)
+  polishTrips(trips)
+  return trips
 
 
 def nameify(trip, places):
@@ -802,8 +831,7 @@ class TripLoad(webapp2.RequestHandler):
           thisTrip = Trip.get(currentUser.trips[startAt])
         logging.info(thisTrip.title)
         path = os.path.join(os.path.dirname(__file__), 'templates/tripLoad.html')
-        currentTime = datetime.datetime.now()
-        self.response.out.write(template.render(path, {'trip' : thisTrip, 'next' : startAt + 1, 'currentTime' : currentTime}))
+        self.response.out.write(template.render(path, {'trip' : thisTrip, 'next' : startAt + 1 }))
       else:
         self.response.out.write('<script>youDone = true;</script>')
 
@@ -822,7 +850,8 @@ class LightboxLoad(webapp2.RequestHandler):
       thisTrip = thisPhoto.trip_parent
       logging.info(photoID)
 
-      tripCache = memcache.get(str(thisTrip.key().id()))
+      memcacheID = str(thisTrip.key().id())
+      tripCache = memcache.get("l_" + memcacheID)
       if tripCache is not None:
         logging.info('hey its cached!')
         self.response.out.write(tripCache)
@@ -830,7 +859,7 @@ class LightboxLoad(webapp2.RequestHandler):
         logging.info('getting this thing')
         path = os.path.join(os.path.dirname(__file__), 'templates/tripLightbox.html')
         tripCache = template.render(path, {'trip' : thisTrip})
-        memcache.add(str(thisTrip.key().id()), tripCache)
+        memcache.add("l_" + memcacheID, tripCache)
         self.response.out.write(tripCache)
 
 
@@ -860,8 +889,7 @@ class FriendTripLoad(webapp2.RequestHandler):
           thisTrip = Trip.get(currentUser.friends_trips[startAt])
         logging.info(thisTrip.title)
         path = os.path.join(os.path.dirname(__file__), 'templates/friendTripLoad.html')
-        currentTime = datetime.datetime.now()
-        self.response.out.write(template.render(path, {'trip' : thisTrip, 'next' : startAt + 1, 'currentTime' : currentTime}))
+        self.response.out.write(template.render(path, {'trip' : thisTrip, 'next' : startAt + 1 }))
       else:
         self.response.out.write('<script>friendDone = true;</script>')
 

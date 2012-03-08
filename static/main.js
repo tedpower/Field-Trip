@@ -7,6 +7,7 @@ var hasRun = false;
 var friendNext = 0;
 var friendDone = false;
 var friendHasRun = false;
+var lightboxOpen = false;
 
 $(document).ready(function(){
 
@@ -30,8 +31,8 @@ $(document).ready(function(){
     $('#friendPhotos').css({'display':'block'});
     $('#photos').css({'display':'none'});
     friendsTab = true;
-    updateLine();
     updateFriendPhotos();
+    updateLine();
     return false;
   });
 
@@ -41,16 +42,16 @@ $(document).ready(function(){
     $('#friendPhotos').css({'display':'none'});
     $('#photos').css({'display':'block'});
     friendsTab = false;
+    updatePhotos();
     updateLine();
     return false;
   });
 
-  $("#hide").click(function() {
-    closeLightbox();
-  });
-
   $('html').click(function() {
     $('#menubox').hide();
+    if (lightboxOpen) {
+      closeLightbox();
+    }
   });
 
   $('#menubox').click(function(event){
@@ -75,6 +76,7 @@ if (e.keyCode == 37) {
   }
   currentPhoto = "#" + prevPhoto;
   $(currentPhoto).removeClass('hidden');
+  centerLB();
   var photoID = prevPhoto.substring(2);
   getComments(photoID);
   return false;
@@ -89,6 +91,7 @@ if (e.keyCode == 39) {
   }
   currentPhoto = "#" + nextPhoto;
   $(currentPhoto).removeClass('hidden');
+  centerLB();
   var photoID = nextPhoto.substring(2);
   getComments(photoID);
   return false;
@@ -125,11 +128,10 @@ function updatePhotos() {
         });
         tripIndx = youNext - 1;
         $("#y_trip" + tripIndx).find(".y_photo").click(function() {
-          console.log('click you trip');
+          event.stopPropagation();
           var photoID = $(this).attr('id');
           photoID = photoID.substring(2);
           currentPhoto = "#l_" + photoID;
-          console.log(currentPhoto);
           var thisTrip = $(this).parent().attr('id');
           if (thisTrip != currentTrip) {
             $.ajax({
@@ -138,12 +140,12 @@ function updatePhotos() {
               success: function(html){
                 $("#hide").html(html);
                 currentTrip = thisTrip;
-
                 $(currentPhoto).removeClass('hidden');
                 $('#hide').removeClass('invisible');
                 $('body').addClass('theaterMode');
                 getComments(photoID);
-
+                lightboxOpen = true;
+                centerLB();
               }
             });
           } else {
@@ -151,8 +153,9 @@ function updatePhotos() {
             $('#hide').removeClass('invisible');
             $('body').addClass('theaterMode');
             getComments(photoID);
+            lightboxOpen = true;
+            centerLB();
           }
-
         });
       }
     }
@@ -188,15 +191,11 @@ function updateFriendPhotos() {
         });
 
         tripIndx = friendNext - 1;
-        $("#f_trip" + tripIndx).click(function() {
-          console.log('clicdk');
-        });
         $("#f_trip" + tripIndx).find(".f_photo").click(function() {
-          console.log('click');
+          event.stopPropagation();
           var photoID = $(this).attr('id');
           photoID = photoID.substring(2);
           currentPhoto = "#l_" + photoID;
-          console.log(currentPhoto);
           var thisTrip = $(this).parent().attr('id');
           if (thisTrip != currentTrip) {
             $.ajax({
@@ -205,12 +204,19 @@ function updateFriendPhotos() {
               success: function(html){
                 $("#hide").html(html);
                 currentTrip = thisTrip;
-
                 $(currentPhoto).removeClass('hidden');
                 $('#hide').removeClass('invisible');
                 $('body').addClass('theaterMode');
                 getComments(photoID);
-
+                lightboxOpen = true;
+                centerLB();
+                // do this only for this batch
+                $('.metaWrap').click(function(event){
+                  event.stopPropagation();
+                });
+                $('.bigWrap').click(function(event){
+                  event.stopPropagation();
+                });
               }
             });
           } else {
@@ -218,6 +224,8 @@ function updateFriendPhotos() {
             $('#hide').removeClass('invisible');
             $('body').addClass('theaterMode');
             getComments(photoID);
+            lightboxOpen = true;
+            centerLB();
           }
         });
 
@@ -242,13 +250,14 @@ function closeLightbox() {
   currentPhoto = null;
   $('#hide').addClass('invisible');
   $('body').removeClass('theaterMode');
+  lightboxOpen = false;
   return false;
 }
 
 function getComments(photoID) {
   var parent = "#l_" + photoID;
   if ($(parent).find(".comments").length == 0) {
-    $(parent).find(".meta").append('<div class="comments"></div>');
+    $(parent).find(".meta .inner").append('<div class="comments"></div>');
     $.ajax({
       url: "/getComments?photo="  + photoID,
       cache: false,
@@ -256,5 +265,22 @@ function getComments(photoID) {
         $(parent).find(".comments").append(html);
       }
     });
+  }
+}
+
+$(window).resize(function() {
+  if (lightboxOpen) {
+    centerLB();
+  }
+});
+
+function centerLB() {
+  lbHeight = $(currentPhoto).find(".zoomContentWrap").height() + 38;
+  if ($(window).height() > lbHeight) {
+    paddingCalc = ($(window).height() - lbHeight) / 2;
+    paddingCalc = String(paddingCalc) + "px";
+    $(currentPhoto).css("padding-top",paddingCalc);
+  } else {
+    $(currentPhoto).css("padding-top",0);
   }
 }

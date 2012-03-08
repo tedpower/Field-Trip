@@ -1,3 +1,13 @@
+{% if 5 > photo.get_like_count > 0 %}
+    ♥ {% for like in photo.get_likes %}
+    {{ like.name }},
+    {% endfor %}
+{% else %}
+    {% if photo.get_like_count > 5 %}
+        ♥ {{ photo.get_like_count }}
+    {% endif %}
+{% endif %}
+
 {% for comment in photo.get_comments %}
 <p>{{ comment.name }} : {{ comment.text }}</p>
 {% endfor %}

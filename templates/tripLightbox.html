@@ -1,33 +1,52 @@
 {% for photo in trip.get_all_photos %}
   {% if not photo.hidden %}
     <div id="l_{{photo.key_id}}" class="lightbox hidden">
-      <div class="zoomContentWrap" style="width:{{ photo.width }}px;">
+      <div class="zoomContentWrap" style="width:{{ photo.width|add:"322" }}px;">
         <div class="zoomContent" style="width:{{ photo.width }}px;">
           <div class="bigWrap" style="height:{{ photo.height }}px;">
             <img src="{{ photo.photo_url }}">
-            <div class="photoHighlight"></div>
+            <div  class="lbButtonBar" style="display: none;">
+              <a href="/likePhoto?id={{ photo.key_id }}" class="lbButton">Like</a>
+              <a href="/hidePhoto?id={{ photo.key_id }}" class="lbButton">Hide</a>
+            </div>
           </div>
-
-          <div class="meta" style="width:{{ photo.width|add:"-40" }}px;">
-            <a href="/hidePhoto?id={{ photo.key_id }}">Hide</a>
-            {% if photo.shout %}
-              <div class="shout"><span class="firstname">{{ photo.trip_parent.user_parent.firstName }} :</span> "{{photo.shout}}"</div>
-            {% endif %}
-            {% if photo.fs_venue_name and photo.fs_venue_id %}
-              <a class="venue" href="https://foursquare.com/v/{{photo.fs_venue_id}}">{{photo.fs_venue_name}}</a>
-            {% else %}
-              {% if photo.fs_venue_name %}
-                <div class="venue">{{photo.fs_venue_name}}</div>
+        </div>
+        <div class="metaWrap">
+          <div class="meta">
+            <div class="inner">
+              {% if photo.shout %}
+                <div class="shout">{{ photo.shout }}</div> –
               {% endif %}
-            {% endif %}
-            {% if photo.link %}
-              <a class="date" href="{{ photo.link }}">{{ photo.fs_createdAt|date:"M j, Y" }}</a>
-            {% else %}
-              <div class="date">{{ photo.fs_createdAt|date:"M j, Y" }}</div>
-            {% endif %}
+              <span class="firstname">{{ photo.trip_parent.user_parent.firstName }}</span>
+              {% if photo.fs_venue_name and photo.fs_venue_id %}
+               at
+                <a class="venue" href="https://foursquare.com/v/{{photo.fs_venue_id}}">{{ photo.fs_venue_name }}</a>
+              {% else %}
+                {% if photo.fs_venue_name %}
+                  at <span class="venue">{{ photo.fs_venue_name }}</span>
+                {% endif %}
+              {% endif %}
+              {% if photo.link %}
+                <a class="date" href="{{ photo.link }}">{{ photo.fs_createdAt|date:"M j, Y" }}</a>
+              {% else %}
+                <div class="date">{{ photo.fs_createdAt|date:"M j, Y" }}</div>
+              {% endif %}
+            </div>
+            <form class="commentForm"><input type="text" name="comment" class="commentInput" /></form>
+            <div class="mapSliver">
+              <div class="mapHighlight"></div>
+              <img src="http://maps.googleapis.com/maps/api/staticmap?center={{ photo.fs_lat }},{{ photo.fs_lng }}&zoom=11&size=300x200&sensor=false" />
+            </div>
           </div>
         </div>
       </div>
+
+      <div class="countBar">
+        ←
+          {{ photo.trip_indx }} of {{ photo.trip_parent.count }}
+        →
+      </div>
+
     </div>
   {% endif %}
 {% endfor %}

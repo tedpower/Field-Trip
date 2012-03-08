@@ -10,40 +10,10 @@
           <h2>{{ trip.get_mini_user.firstName }}
           <span class="deemph">in</span> {{ trip.title }}</h2>
           <div class="tripName">
-            {% ifequal currentTime|date:"Y" trip.start_date|date:"Y" %}
-              {% if trip.end_date %}
-                {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
-                  {{ trip.start_date|date:"M j" }}
-                {% else %}
-                  {% ifequal trip.start_date|date:"M" trip.end_date|date:"M" %}
-                    {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"j" }}
-                  {% else %}
-                    {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"M j" }}
-                  {% endifequal %}
-                {% endifequal %}
-              {% else %}
-              <!-- if trip start day is today 'left this morning' or 'just started' -->
-                <span class="now">Now</span> since {{ trip.start_date|date:"M j" }}
-              {% endif %}
-            {% else %}
-              {% if trip.end_date %}
-                {% ifequal trip.start_date|date:"M j, Y" trip.end_date|date:"M j, Y" %}
-                  {{ trip.start_date|date:"M j, Y" }}
-                {% else %}
-                  {% ifequal trip.start_date|date:"Y" trip.end_date|date:"Y" %}
-                    {% ifequal trip.start_date|date:"M" trip.end_date|date:"M" %}
-                      {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"j, Y" }}
-                    {% else %}
-                      {{ trip.start_date|date:"M j" }} - {{ trip.end_date|date:"M j, Y" }}
-                    {% endifequal %}
-                  {% else %}
-                    {{ trip.start_date|date:"M j, Y" }} - {{ trip.end_date|date:"M j, Y" }}
-                  {% endifequal %}
-                {% endifequal %}
-              {% else %}
-                <span class="now">Now</span> since {{ trip.start_date|date:"M j, Y" }}
-              {% endif %}
-            {% endifequal %}
+            {% if not trip.end_date %}
+              <span class="now">Now</span> since
+            {% endif %}
+            {{ trip.get_date_range }}
           </div>
         {% endif %}
       </div>
@@ -70,6 +40,7 @@
           <div class="shortHeroFPhoto">
             <img src="{{ trip.get_photos_mini.0.photo_url }}" class="portrait" style="{{ trip.get_photos_mini.0.get_short_offset }}" />
           </div>
+        </div>
         <div id="f_{{trip.get_photos_mini.1.key_id}}" class="f_photo">
           <img src="{{ trip.get_photos_mini.1.med_thumb }}" class="mThumbFPhoto">
         </div>
@@ -125,7 +96,9 @@
         <div id="f_{{trip.get_photos_mini.3.key_id}}" class="f_photo">
           <img src="{{ trip.get_photos_mini.3.small_thumb }}" class="sThumbFPhoto">
         </div>
-        <div class="moreCount">+{{ trip.count|add:"-4"}}</div>
+        <div id="m_{{trip.get_photos_mini.0.key_id}}" class="f_photo">
+          <div class="moreCount">+{{ trip.count|add:"-4"}}</div>
+        </div>
       {% endif %}
 
     </div>
