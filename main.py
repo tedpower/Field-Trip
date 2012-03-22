@@ -1125,7 +1125,7 @@ class ClearCache(webapp2.RequestHandler):
     memcache.flush_all()
 
 
-app = webapp2.WSGIApplication([('/', Index,),
+app = webapp2.WSGIApplication([('/', Index),
                                ('/fs_auth', FS_OAuthRequest),
                                ('/ig_auth', IG_OAuthRequest),
                                ('/fb_auth', FB_OAuthRequest),

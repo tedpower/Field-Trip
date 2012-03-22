@@ -1,5 +1,5 @@
 {% if trip.get_photos_mini %}
-  <div class="friendTrip">
+  <div class="friendTrip" id="{{ trip.key.id }}">
     <div class="tripHead clearfix">
       <img src="{{ trip.get_mini_user.fs_profilePic }}" class="miniprofile">
       <div class="tripTitle">
@@ -19,88 +19,103 @@
       </div>
     </div>
     <div class="clearfix" id="f_trip{{ next|add:"-1" }}">
-
       {% if trip.count == 1 %}
-        <div id="f_{{trip.get_photos_mini.0.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.0.key_id }}" class="f_photo">
           <div class="heroFPhoto">
             <img src="{{ trip.get_photos_mini.0.photo_url }}" class="{{ trip.get_photos_mini.0.get_orientation }}" style="{{ trip.get_photos_mini.0.get_offset }}" />
           </div>
         </div>
       {% endif %}
       {% if trip.count == 2 %}
-        <div id="f_{{trip.get_photos_mini.0.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.0.key_id }}" class="f_photo">
           <img src="{{ trip.get_photos_mini.0.med_thumb }}" class="mThumbFPhoto">
         </div>
-        <div id="f_{{trip.get_photos_mini.1.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.1.key_id }}" class="f_photo">
           <img src="{{ trip.get_photos_mini.1.med_thumb }}" class="mThumbFPhoto">
         </div>
       {% endif %}
       {% if trip.count == 3 %}
-        <div id="f_{{trip.get_photos_mini.0.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.0.key_id }}" class="f_photo">
           <div class="shortHeroFPhoto">
             <img src="{{ trip.get_photos_mini.0.photo_url }}" class="portrait" style="{{ trip.get_photos_mini.0.get_short_offset }}" />
           </div>
         </div>
-        <div id="f_{{trip.get_photos_mini.1.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.1.key_id }}" class="f_photo">
           <img src="{{ trip.get_photos_mini.1.med_thumb }}" class="mThumbFPhoto">
         </div>
-        <div id="f_{{trip.get_photos_mini.2.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.2.key_id }}" class="f_photo">
           <img src="{{ trip.get_photos_mini.2.med_thumb }}" class="mThumbFPhoto">
         </div>
       {% endif %}
       {% if trip.count == 4 %}
-        <div id="f_{{trip.get_photos_mini.0.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.0.key_id }}" class="f_photo">
           <img src="{{ trip.get_photos_mini.0.med_thumb }}" class="mThumbFPhoto">
         </div>
         <div id="f_{{trip.get_photos_mini.1.key_id}}" class="f_photo">
           <img src="{{ trip.get_photos_mini.1.med_thumb }}" class="mThumbFPhoto">
         </div>
-        <div id="f_{{trip.get_photos_mini.2.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.2.key_id }}" class="f_photo">
           <img src="{{ trip.get_photos_mini.2.med_thumb }}" class="mThumbFPhoto">
         </div>
-        <div id="f_{{trip.get_photos_mini.3.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.3.key_id }}" class="f_photo">
           <img src="{{ trip.get_photos_mini.3.med_thumb }}" class="mThumbFPhoto">
         </div>
       {% endif %}
       {% if trip.count == 5 %}
-        <div id="f_{{trip.get_photos_mini.0.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.0.key_id }}" class="f_photo">
           <div class="heroFPhoto">
             <img src="{{ trip.get_photos_mini.0.photo_url }}" class="{{ trip.get_photos_mini.0.get_orientation }}" style="{{ trip.get_photos_mini.0.get_offset }}" />
           </div>
         </div>
-        <div id="f_{{trip.get_photos_mini.1.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.1.key_id }}" class="f_photo">
           <img src="{{ trip.get_photos_mini.1.small_thumb }}" class="sThumbFPhoto">
         </div>
-        <div id="f_{{trip.get_photos_mini.2.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.2.key_id }}" class="f_photo">
          <img src="{{ trip.get_photos_mini.2.small_thumb }}" class="sThumbFPhoto">
         </div>
-        <div id="f_{{trip.get_photos_mini.3.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.3.key_id }}" class="f_photo">
           <img src="{{ trip.get_photos_mini.3.small_thumb }}" class="sThumbFPhoto">
         </div>
-        <div id="f_{{trip.get_photos_mini.4.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.4.key_id }}" class="f_photo">
           <img src="{{ trip.get_photos_mini.4.small_thumb }}" class="sThumbFPhoto">
         </div>
       {% endif %}
       {% if trip.count > 5 %}
-        <div id="f_{{trip.get_photos_mini.0.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.0.key_id }}" class="f_photo">
           <div class="heroFPhoto">
             <img src="{{ trip.get_photos_mini.0.photo_url }}" class="{{ trip.get_photos_mini.0.get_orientation }}" style="{{ trip.get_photos_mini.0.get_offset }}" />
           </div>
         </div>
-        <div id="f_{{trip.get_photos_mini.1.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.1.key_id }}" class="f_photo">
           <img src="{{ trip.get_photos_mini.1.small_thumb }}" class="sThumbFPhoto">
         </div>
-        <div id="f_{{trip.get_photos_mini.2.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.2.key_id }}" class="f_photo">
          <img src="{{ trip.get_photos_mini.2.small_thumb }}" class="sThumbFPhoto">
         </div>
-        <div id="f_{{trip.get_photos_mini.3.key_id}}" class="f_photo">
+        <div id="f_{{ trip.get_photos_mini.3.key_id }}" class="f_photo">
           <img src="{{ trip.get_photos_mini.3.small_thumb }}" class="sThumbFPhoto">
         </div>
-        <div id="m_{{trip.get_photos_mini.0.key_id}}" class="f_photo">
+        <div id="m_{{ trip.get_photos_mini.0.key_id }}" class="f_photo">
           <div class="moreCount">+{{ trip.count|add:"-4"}}</div>
         </div>
       {% endif %}
-
     </div>
   </div>
+
+  <script>
+    var test = new Object();
+    var orderindx = new Array();
+    var visiblePhoto = new Array();
+    {% for photo in trip.get_all_photos %}
+      test['{{ photo.key_id }}']="<div id=\"l_{{ photo.key_id }}\" class=\"lightbox hidden\"><div class=\"zoomContentWrap\" style=\"width:{{ photo.width|add:"322" }}px;\"><div class=\"zoomContent\" style=\"width:{{ photo.width }}px;\"><div class=\"bigWrap\" style=\"height:{{ photo.height }}px;\"><img src=\"{{ photo.photo_url }}\"></div></div></div></div>";
+
+      orderindx.push('{{ photo.key_id }}');
+      visiblePhoto.push(false);
+    {% endfor %}
+    var nextThing = '{{ trip.key.id }}';
+    lb_array[nextThing] = test;
+    lb_order_indx[nextThing] = orderindx;
+    lb_visible_photo[nextThing] = visiblePhoto;
+  </script>
+
 {% endif %}

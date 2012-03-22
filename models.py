@@ -268,8 +268,11 @@ class Trip(db.Model):
         listOfPhotos = []
         for photo in self.photos:
             if len(listOfPhotos) < 5:
-                # should sort em
-                listOfPhotos.append(Photo.get_by_key_name(photo))
+                thisPhoto = Photo.get_by_key_name(photo)
+                if (not thisPhoto.ig_pushed_to_fs) or (thisUser.ig_id == None):
+                    if thisPhoto.hidden is False:
+                        # should sort em
+                        listOfPhotos.append(thisPhoto)
             else:
                 break
         return listOfPhotos
