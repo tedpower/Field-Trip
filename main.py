@@ -879,8 +879,8 @@ class GetSidebar(webapp2.RequestHandler):
 
         if 5 > likeCount > 0:
           for like in thisPhoto.likes:
-            name = User.get(like.user).firstName
-            photo = lUser.get(like.user).fs_profilePic
+            name = User.get(like).firstName
+            photo = User.get(like).fs_profilePic
             likeList.append({'name':name, 'photo':photo})
 
         for comment in thisPhoto.comments:
@@ -985,19 +985,16 @@ class Like(webapp2.RequestHandler):
       thisPhoto = Photo.get_by_key_name(photoID)
 
       if currentUser.key().name() not in thisPhoto.likes:
-        thisPhoto.liked.append(currentUser.key())
+        thisPhoto.likes.append(currentUser.key())
         thisPhoto.put()
 
       if not thisPhoto.fs_venue_only_photo:
-        # if thisPhoto.fs_checkin_id:
-        #   # no likes in foursquare yet
-            # https://api.foursquare.com/v2/checkins/4f6ca565e4b0dca2df99c823/like?set=true&oauth_token=203D41ZDC5D3MNZGOAA34SR2WU3ZVGMGDDB2AUYRD20FMQ2O
-        # else:
-        data = urllib.urlencode({"access_token":currentUser.ig_token})
-        url = "https://api.instagram.com/v1/media/%s/likes" % (thisPhoto.key_id)
-        result = urllib.urlopen(url,data).read()
-        url_response = simplejson.loads(result)
-        logging.info(url_response)
+        if not thisPhoto.fs_checkin_id:
+          data = urllib.urlencode({"access_token":currentUser.ig_token})
+          url = "https://api.instagram.com/v1/media/%s/likes" % (thisPhoto.key_id)
+          result = urllib.urlopen(url,data).read()
+          url_response = simplejson.loads(result)
+          logging.info(url_response)
 
 
 class FriendTripLoad(webapp2.RequestHandler):
