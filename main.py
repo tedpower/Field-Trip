@@ -87,7 +87,7 @@ class FS_OAuthRequest(webapp2.RequestHandler):
 
 class IG_OAuthRequest(webapp2.RequestHandler):
   def get(self):
-    self.redirect("https://api.instagram.com/oauth/authorize/?client_id=%s&redirect_uri=%s&response_type=code" % (instagram_creds['key'], instagram_creds['return_url']))
+    self.redirect("https://api.instagram.com/oauth/authorize/?client_id=%s&redirect_uri=%s&response_type=code&scope=likes+comments" % (instagram_creds['key'], instagram_creds['return_url']))
 
 
 class FB_OAuthRequest(webapp2.RequestHandler):
@@ -135,7 +135,7 @@ class FS_OAuthRequestValid(webapp2.RequestHandler):
         currentUser.lastName = self_response['response']['user']['lastName']
       if 'twitter' in self_response['response']['user']['contact']:
         currentUser.twitter = self_response['response']['user']['contact']['twitter']
-      if 'photo' in  self_response['response']['user']:
+      if 'photo' in self_response['response']['user']:
         currentUser.fs_profilePic = self_response['response']['user']['photo']
       if not currentUser.homeCity:
         currentUser.homeCity = self_response['response']['user']['homeCity']
@@ -863,13 +863,141 @@ class LightboxLoad(webapp2.RequestHandler):
         self.response.out.write(tripCache)
 
 
-class GetComments(webapp2.RequestHandler):
+class GetSidebar(webapp2.RequestHandler):
   def get(self):
     photoID = self.request.get("photo")
     thisPhoto = Photo.get_by_key_name(photoID)
     logging.info(photoID)
-    path = os.path.join(os.path.dirname(__file__), 'templates/comments.html')
-    self.response.out.write(template.render(path, {'photo' : thisPhoto}))
+
+    commentList = []
+    likeCount = 0
+    likeList = []
+
+    if not thisPhoto.fs_venue_only_photo:
+      if thisPhoto.fs_checkin_id:
+        likeCount = len(thisPhoto.likes)
+
+        if 5 > likeCount > 0:
+          for like in thisPhoto.likes:
+            name = User.get(like.user).firstName
+            photo = lUser.get(like.user).fs_profilePic
+            likeList.append({'name':name, 'photo':photo})
+
+        for comment in thisPhoto.comments:
+          thisComment = PhotoComment.get(comment)
+          thisUser = thisComment.user_parent
+          name = thisUser.firstName
+          photo = thisUser.fs_profilePic
+          timestamp = thisComment.created
+          text = thisComment.text
+          commentList.append({'name': name, 'photo': photo, 'timestamp': timestamp, 'text': text})
+
+        # thisUser = thisPhoto.trip_parent.user_parent
+        # comments_url = "https://api.foursquare.com/v2/checkins/%s?oauth_token=%s" % (thisPhoto.fs_checkin_id, thisUser.fs_token)
+        # comments_json = urlfetch.fetch(comments_url, validate_certificate=False)
+        # comments_response = simplejson.loads(comments_json.content)
+        # # logging.info(comments_url)
+        # comments = comments_response['response']['checkin']['comments']
+        # commentCount = comments['count']
+        # if commentCount > 0:
+        #   for comment in comments['items']:
+        #     name = comment['user']['firstName']
+        #     photo = comment['user']['photo']
+        #     timestamp = comment['createdAt']
+        #     text = comment['text']
+        #     commentList.append({'name':name, 'photo':photo, 'timestamp':timestamp, 'text':text})
+      else:
+        thisUser = thisPhoto.trip_parent.user_parent
+        comments_url = "https://api.instagram.com/v1/media/%s?access_token=%s" % (thisPhoto.key_id, thisUser.ig_token)
+        comments_json = urlfetch.fetch(comments_url, validate_certificate=False, deadline=10)
+        comments_response = simplejson.loads(comments_json.content)
+        # logging.info(comments_url)
+        if 'data' in comments_response:
+          comments = comments_response['data']['comments']
+          commentCount = comments['count']
+          likes = comments_response['data']['likes']
+          likeCount = likes['count']
+          if commentCount > 0:
+            for comment in comments['data']:
+              name = comment['from']['username']
+              photo = comment['from']['profile_picture']
+              timestamp = comment['created_time']
+              text = comment['text']
+              commentList.append({'name': name, 'photo': photo, 'timestamp': timestamp, 'text': text})
+          if 5 > likeCount > 0:
+            for like in likes['data']:
+              name = like['username']
+              photo = like['profile_picture']
+              likeList.append({'name':name, 'photo':photo})
+
+    path = os.path.join(os.path.dirname(__file__), 'templates/lbside.html')
+    self.response.out.write(template.render(path, {'photo' : thisPhoto, 'commentList': commentList, 'likeCount': likeCount, 'likeList': likeList}))
+
+
+class Comment(webapp2.RequestHandler):
+  def post(self):
+    cookieValue = None
+    try:
+      cookieValue = self.request.cookies['FT_Cookie']
+    except KeyError:
+      logging.info('no cookie')
+    if cookieValue:
+      currentUser = User.get_by_key_name(cookieValue)
+
+      comment = self.request.get('comment')
+      photoID = self.request.get('photoID')
+
+      thisPhoto = Photo.get_by_key_name(photoID)
+
+      if not thisPhoto.fs_venue_only_photo:
+        if thisPhoto.fs_checkin_id:
+
+          newComment = PhotoComment()
+          newComment.photo_parent = thisPhoto.key()
+          newComment.user_parent = currentUser.key()
+          newComment.text = comment
+          newComment.put()
+
+          thisPhoto.comments.append(newComment.key())
+          thisPhoto.put()
+
+        else:
+          comment = urllib.quote_plus(comment)
+          data = urllib.urlencode({"access_token":currentUser.ig_token,"text":comment})
+          url = "https://api.instagram.com/v1/media/%s/comments" % (thisPhoto.key_id)
+          result = urllib.urlopen(url,data).read()
+          logging.info(result)
+          url_response = simplejson.loads(result)
+          logging.info(url_response)
+
+
+class Like(webapp2.RequestHandler):
+  def post(self):
+    cookieValue = None
+    try:
+      cookieValue = self.request.cookies['FT_Cookie']
+    except KeyError:
+      logging.info('no cookie')
+    if cookieValue:
+      currentUser = User.get_by_key_name(cookieValue)
+
+      photoID = self.request.get('photoID')
+      thisPhoto = Photo.get_by_key_name(photoID)
+
+      if currentUser.key().name() not in thisPhoto.likes:
+        thisPhoto.liked.append(currentUser.key())
+        thisPhoto.put()
+
+      if not thisPhoto.fs_venue_only_photo:
+        # if thisPhoto.fs_checkin_id:
+        #   # no likes in foursquare yet
+            # https://api.foursquare.com/v2/checkins/4f6ca565e4b0dca2df99c823/like?set=true&oauth_token=203D41ZDC5D3MNZGOAA34SR2WU3ZVGMGDDB2AUYRD20FMQ2O
+        # else:
+        data = urllib.urlencode({"access_token":currentUser.ig_token})
+        url = "https://api.instagram.com/v1/media/%s/likes" % (thisPhoto.key_id)
+        result = urllib.urlopen(url,data).read()
+        url_response = simplejson.loads(result)
+        logging.info(url_response)
 
 
 class FriendTripLoad(webapp2.RequestHandler):
@@ -1142,11 +1270,13 @@ app = webapp2.WSGIApplication([('/', Index),
                                ('/friendTripLoad', FriendTripLoad),
                                ('/lightboxLoad', LightboxLoad),
                                ('/findTrips', FindTrips),
-                               ('/getComments', GetComments),
+                               ('/getSidebar', GetSidebar),
                                ('/hidePhoto', HidePhoto),
                                ('/friends', Friends),
                                ('/merge', MergeIgFs),
                                ('/signup', SignUp),
+                               ('/comment', Comment),
+                               ('/like', Like),
                                ('/networks', Networks),
                                ('/loadingStage', LoadingStage),
                                ('/friends/(.*)', FriendPage),

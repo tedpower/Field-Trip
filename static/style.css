@@ -234,7 +234,7 @@ color: #666666;
 }
 
 #hide {
-    background-color: rgba(0, 0, 0, .8);
+    background-color: rgba(0, 0, 0, .9);
     z-index: 4;
     position: fixed;
     top: 0;
@@ -336,23 +336,18 @@ color: #666666;
 .commentForm {
   background-color: #F5F5F5;
   border-top: 1px solid rgba(0,0,0,.1);
+  padding: 8px 15px 9px 15px;
 }
 
-.commentInput {
+.commentInput, .placeholder {
   border: 1px solid rgba(0,0,0,.14);
   padding: 5px;
-  margin: 8px 15px 9px 15px;
+  margin: 0;
   width: 260px;
-}
-
-.speechStem {
-  background: url(speechStem.png) no-repeat;
-  position: absolute;
-  top: 1px;
-  right: 301px;
-  width: 14px;
-  height: 61px;
-  z-index: 10;
+  cursor: text;
+  background-color: white;
+  font-size: 13px;
+  line-height: 18px;
 }
 
 .lbButton:hover {
@@ -395,19 +390,21 @@ color: #666666;
   height: 80px;
   overflow: hidden;
   position: relative;
+  background-color: whitesmoke;
 }
 
 .mapSliver img {
-  margin-top: -60px;
+  margin-top: -31px;
 }
 
 .mapHighlight {
-  background-color: rgba(0,0,0,.16);
   position: absolute;
-  top:0;
-  left:0;
-  right:0;
-  height:1px;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-top: 1px solid rgba(0, 0, 0, .16);
+  background: url('pin.png') no-repeat 50% 50%;
 }
 
 .firstname {

@@ -1,0 +1,47 @@
+<div class="meta">
+  <div class="inner">
+    {% if photo.shout %}
+      <div class="shout">{{ photo.shout }}</div> –
+    {% endif %}
+    <span class="firstname">{{ photo.trip_parent.user_parent.firstName }}</span>
+    {% if photo.fs_venue_name and photo.fs_venue_id %}
+     at
+      <a class="venue" href="https://foursquare.com/v/{{photo.fs_venue_id}}">{{ photo.fs_venue_name }}</a>
+    {% else %}
+      {% if photo.fs_venue_name %}
+        at <span class="venue">{{ photo.fs_venue_name }}</span>
+      {% endif %}
+    {% endif %}
+    {% if photo.link %}
+      <a class="date" href="{{ photo.link }}">{{ photo.fs_createdAt|date:"M j, Y" }}</a>
+    {% else %}
+      <div class="date">{{ photo.fs_createdAt|date:"M j, Y" }}</div>
+    {% endif %}
+
+    {% if 5 > likeCount > 0 %}
+        ♥ {% for like in likeList %}
+        {{ like.name }},
+        {% endfor %}
+    {% else %}
+        {% if likeCount > 5 %}
+            ♥ {{ likeCount }}
+        {% endif %}
+    {% endif %}
+    {% for comment in commentList %}
+      <p>{{ comment.name }} {{ comment.text }}</p>
+    {% endfor %}
+
+    <a href="#" class="like">Like</a>
+
+  </div>
+  {% if not photo.fs_venue_only_photo %}
+    <form method="post" action="/comment" class="commentForm">
+      <div class="placeholder">Write a comment...</div>
+      <input type="text" name="comment" class="commentInput" style="display: none;" />
+    </form>
+  {% endif %}
+  <div class="mapSliver">
+    <div class="mapHighlight"></div>
+    <img src="http://maps.googleapis.com/maps/api/staticmap?center={{ photo.fs_lat }},{{ photo.fs_lng }}&zoom=11&size=300x160&sensor=false" />
+  </div>
+</div>
