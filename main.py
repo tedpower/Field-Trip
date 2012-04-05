@@ -798,6 +798,7 @@ def airportJiggle(trips):
   return trips
 
 
+
 def nameify(trip, places):
     title = ""
     placeCount = len(places)
@@ -946,21 +947,16 @@ class Comment(webapp2.RequestHandler):
 
       comment = self.request.get('comment')
       photoID = self.request.get('photoID')
-
       thisPhoto = Photo.get_by_key_name(photoID)
-
       if not thisPhoto.fs_venue_only_photo:
         if thisPhoto.fs_checkin_id:
-
           newComment = PhotoComment()
           newComment.photo_parent = thisPhoto.key()
           newComment.user_parent = currentUser.key()
           newComment.text = comment
           newComment.put()
-
           thisPhoto.comments.append(newComment.key())
           thisPhoto.put()
-
         else:
           comment = urllib.quote_plus(comment)
           data = urllib.urlencode({"access_token":currentUser.ig_token,"text":comment})
@@ -1044,7 +1040,6 @@ class HidePhoto(webapp2.RequestHandler):
         currentUser.put()
       else:
         nameTrips([thisTrip.key().name()], currentUser.homeCity, currentUser.gHomeState, currentUser.gHomeCountry)
-
       thisTrip.put()
 
       # delete cash for this trip
@@ -1112,7 +1107,6 @@ class LoadingStage(webapp2.RequestHandler):
         self.response.out.write('Finding your friends')
       elif currentUser.complete_stage == 5:
         self.response.out.write('<div id="go"></div>')
-
 
 
 class SignUp(webapp2.RequestHandler):
@@ -1199,7 +1193,6 @@ class Logout(webapp2.RequestHandler):
     if cookie:
       cookieString = str('FT_Cookie=%s; expires=Thu, 01-Jan-1970 00:00:01 GMT' % cookie)
       self.response.headers.add_header('Set-Cookie', cookieString)
-
     self.redirect("/")
 
 

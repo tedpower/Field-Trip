@@ -83,26 +83,11 @@ if (e.keyCode == 37) {
 
   var photoID = currentPhoto.substring(3);
   var photoIndex = lb_order_indx[currentTrip].indexOf(photoID);
-  var totalPhotos = lb_order_indx[currentTrip].length;
-  var prevPrevPhotoIndex = photoIndex - 2;
+  var photoCount = lb_order_indx[currentTrip].length;
 
-
-  if (prevPrevPhotoIndex >= 0) {
-    if (!lb_visible_photo[currentTrip][prevPrevPhotoIndex]) {
-      prevPhoto = lb_order_indx[currentTrip][prevPrevPhotoIndex];
-      $(currentPhoto).before(lb_array[currentTrip][prevPhoto]);
-      lb_visible_photo[currentTrip][prevPrevPhotoIndex] = true;
-      getSidebar(prevPhoto);
-    }
-  } else {
-    var offset = 0 - prevPrevPhotoIndex;
-    if (!lb_visible_photo[currentTrip][totalPhotos - offset]) {
-      prevPhoto = lb_order_indx[currentTrip][totalPhotos - offset];
-      $("#hide").append(lb_array[currentTrip][prevPhoto]);
-      lb_visible_photo[currentTrip][totalPhotos - offset] = true;
-      getSidebar(prevPhoto);
-    }
-  }
+  var referenceIndx = photoIndex - 1;
+  var prevPhotoIndx = referenceIndx - 1;
+  loadPrevPhoto(prevPhotoIndx, photoCount, referenceIndx, currentTrip);
 
   $('#hide .bigWrap').click(function(event){
     event.stopPropagation();
@@ -124,26 +109,11 @@ if (e.keyCode == 39) {
 
   var photoID = currentPhoto.substring(3);
   var photoIndex = lb_order_indx[currentTrip].indexOf(photoID);
-  var totalPhotos = lb_order_indx[currentTrip].length;
-  var nextNextPhotoIndex = photoIndex + 2;
+  var photoCount = lb_order_indx[currentTrip].length;
 
-
-  if (nextNextPhotoIndex < totalPhotos) {
-    if (!lb_visible_photo[currentTrip][nextNextPhotoIndex]) {
-      nextPhoto = lb_order_indx[currentTrip][nextNextPhotoIndex];
-      $(currentPhoto).after(lb_array[currentTrip][nextPhoto]);
-      lb_visible_photo[currentTrip][nextNextPhotoIndex] = true;
-      getSidebar(nextPhoto);
-    }
-  } else {
-    var offset = nextNextPhotoIndex - totalPhotos;
-    if (!lb_visible_photo[currentTrip][offset]) {
-      nextPhoto = lb_order_indx[currentTrip][offset];
-      $("#hide").prepend(lb_array[currentTrip][nextPhoto]);
-      lb_visible_photo[currentTrip][offset] = true;
-      getSidebar(nextPhoto);
-    }
-  }
+  var referenceIndx = photoIndex + 1;
+  var nextPhotoIndx = referenceIndx + 1;
+  loadNextPhoto(nextPhotoIndx, photoCount, referenceIndx, currentTrip);
 
   $('#hide .bigWrap').click(function(event){
     event.stopPropagation();
@@ -253,9 +223,9 @@ function updateFriendPhotos() {
           currentPhoto = "#l_" + photoID;
           var tripID = $(this).parent().parent().attr('id');
           var photoIndex = lb_order_indx[tripID].indexOf(photoID);
-          var totalPhotos = lb_order_indx[tripID].length;
+          var photoCount = lb_order_indx[tripID].length;
 
-          // console.log('total len is ' + String(totalPhotos));
+          // console.log('total len is ' + String(photoCount));
           // console.log("Photo indx is " + String(photoIndex));
 
           if (currentTrip) {
@@ -275,86 +245,88 @@ function updateFriendPhotos() {
           lightboxOpen = true;
           centerLB();
 
-          var nextPhotoIndex = photoIndex + 1;
-          var prevPhotoIndex = photoIndex - 1;
-          var nextNextPhotoIndex = photoIndex + 2;
-          var prevPrevPhotoIndex = photoIndex - 2;
-
-          if (nextPhotoIndex < totalPhotos) {
-            if (!lb_visible_photo[tripID][nextPhotoIndex]) {
-              nextPhoto = lb_order_indx[tripID][nextPhotoIndex];
-              $(currentPhoto).after(lb_array[tripID][nextPhoto]);
-              lb_visible_photo[tripID][nextPhotoIndex] = true;
-              getSidebar(nextPhoto);
-            }
-          } else {
-            if (!lb_visible_photo[tripID][0]) {
-              nextPhoto = lb_order_indx[tripID][0];
-              $("#hide").prepend(lb_array[tripID][nextPhoto]);
-              lb_visible_photo[tripID][0] = true;
-              getSidebar(nextPhoto);
-            }
-          }
-
-          if (prevPhotoIndex >= 0) {
-            if (!lb_visible_photo[tripID][prevPhotoIndex]) {
-              prevPhoto = lb_order_indx[tripID][prevPhotoIndex];
-              $(currentPhoto).before(lb_array[tripID][prevPhoto]);
-              lb_visible_photo[tripID][prevPhotoIndex] = true;
-              getSidebar(prevPhoto);
-            }
-          } else {
-            if (!lb_visible_photo[tripID][totalPhotos - 1]) {
-              prevPhoto = lb_order_indx[tripID][totalPhotos - 1];
-              $("#hide").append(lb_array[tripID][prevPhoto]);
-              lb_visible_photo[tripID][totalPhotos - 1] = true;
-              getSidebar(prevPhoto);
-            }
-          }
-
-          if (nextNextPhotoIndex < totalPhotos) {
-            if (!lb_visible_photo[tripID][nextNextPhotoIndex]) {
-              nextPhoto = lb_order_indx[tripID][nextNextPhotoIndex];
-              $(currentPhoto).after(lb_array[tripID][nextPhoto]);
-              lb_visible_photo[tripID][nextNextPhotoIndex] = true;
-              getSidebar(nextPhoto);
-            }
-          } else {
-            var offset = nextNextPhotoIndex - totalPhotos;
-            if (!lb_visible_photo[tripID][offset]) {
-              nextPhoto = lb_order_indx[tripID][offset];
-              $("#hide").prepend(lb_array[tripID][nextPhoto]);
-              lb_visible_photo[tripID][offset] = true;
-              getSidebar(nextPhoto);
-            }
-          }
-
-          if (prevPrevPhotoIndex >= 0) {
-            if (!lb_visible_photo[tripID][prevPrevPhotoIndex]) {
-              prevPhoto = lb_order_indx[tripID][prevPrevPhotoIndex];
-              $(currentPhoto).before(lb_array[tripID][prevPhoto]);
-              lb_visible_photo[tripID][prevPrevPhotoIndex] = true;
-              getSidebar(prevPhoto);
-            }
-          } else {
-            var offset = 0 - prevPrevPhotoIndex;
-            if (!lb_visible_photo[tripID][totalPhotos - offset]) {
-              prevPhoto = lb_order_indx[tripID][totalPhotos - offset];
-              $("#hide").append(lb_array[tripID][prevPhoto]);
-              lb_visible_photo[tripID][totalPhotos - offset] = true;
-              getSidebar(prevPhoto);
-            }
+          for (var i=0; i<2; i++) {
+            var referenceIndx = photoIndex + i;
+            var nextPhotoIndx = referenceIndx + 1;
+            loadNextPhoto(nextPhotoIndx, photoCount, referenceIndx, tripID);
+            var referenceIndx = photoIndex - i;
+            var prevPhotoIndx = referenceIndx - 1;
+            loadPrevPhoto(prevPhotoIndx, photoCount, referenceIndx, tripID);
           }
 
           $('#hide .bigWrap').click(function(event){
             event.stopPropagation();
           });
-
         });
       }
     }
   }
 }
+
+function loadNextPhoto(nextPhotoIndx, photoCount, referenceIndx, tripID) {
+  console.log('nextPhotoIndx ' + nextPhotoIndx + " photoCount " + photoCount);
+  if (nextPhotoIndx < photoCount) {
+    if (!lb_visible_photo[tripID][nextPhotoIndx]) {
+      relativePhoto = lb_order_indx[tripID][referenceIndx];
+      relativePhoto = "#l_" + relativePhoto;
+      nextPhoto = lb_order_indx[tripID][nextPhotoIndx];
+      $(relativePhoto).after(lb_array[tripID][nextPhoto]);
+      lb_visible_photo[tripID][nextPhotoIndx] = true;
+      getSidebar(nextPhoto);
+    }
+  } else {
+    var offset = nextPhotoIndx - photoCount;
+    if (!lb_visible_photo[tripID][offset]) {
+      if (offset == 0) {
+        nextPhoto = lb_order_indx[tripID][0];
+        $("#hide").prepend(lb_array[tripID][nextPhoto]);
+        lb_visible_photo[tripID][0] = true;
+        getSidebar(nextPhoto);
+      } else {
+        relOffset = referenceIndx - photoCount;
+        relativePhoto = lb_order_indx[tripID][relOffset];
+        relativePhoto = "#l_" + relativePhoto;
+        nextPhoto = lb_order_indx[tripID][offset];
+        $(relativePhoto).after(lb_array[tripID][nextPhoto]);
+        lb_visible_photo[tripID][offset] = true;
+        getSidebar(nextPhoto);
+      }
+    }
+  }
+}
+
+function loadPrevPhoto(prevPhotoIndx, photoCount, referenceIndx, tripID) {
+  console.log('prevPhotoIndx ' + prevPhotoIndx + " photoCount " + photoCount);
+  if (prevPhotoIndx >= 0) {
+    if (!lb_visible_photo[tripID][prevPhotoIndx]) {
+      relativePhoto = lb_order_indx[tripID][referenceIndx];
+      relativePhoto = "#l_" + relativePhoto;
+      prevPhoto = lb_order_indx[tripID][prevPhotoIndx];
+      $(relativePhoto).before(lb_array[tripID][prevPhoto]);
+      lb_visible_photo[tripID][prevPhotoIndx] = true;
+      getSidebar(prevPhoto);
+    }
+  } else {
+    var offset = 0 - prevPhotoIndx;
+    if (!lb_visible_photo[tripID][photoCount - offset]) {
+      if (offset == 1) {
+        prevPhoto = lb_order_indx[tripID][photoCount - 1];
+        $("#hide").append(lb_array[tripID][prevPhoto]);
+        lb_visible_photo[tripID][photoCount - 1] = true;
+        getSidebar(prevPhoto);
+      } else {
+        relOffset = 0 - referenceIndx;
+        relativePhoto = lb_order_indx[tripID][photoCount - relOffset];
+        relativePhoto = "#l_" + relativePhoto;
+        prevPhoto = lb_order_indx[tripID][photoCount - offset];
+        $(relativePhoto).before(lb_array[tripID][prevPhoto]);
+        lb_visible_photo[tripID][photoCount - offset] = true;
+        getSidebar(prevPhoto);
+      }
+    }
+  }
+}
+
 
 function updateLine() {
   if (friendsTab) {
