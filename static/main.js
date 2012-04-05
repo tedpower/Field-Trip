@@ -87,7 +87,7 @@ if (e.keyCode == 37) {
 
   var referenceIndx = photoIndex - 1;
   var prevPhotoIndx = referenceIndx - 1;
-  loadPrevPhoto(prevPhotoIndx, photoCount, referenceIndx, currentTrip);
+  loadPrevPhoto(prevPhotoIndx, photoCount, referenceIndx);
 
   $('#hide .bigWrap').click(function(event){
     event.stopPropagation();
@@ -113,7 +113,7 @@ if (e.keyCode == 39) {
 
   var referenceIndx = photoIndex + 1;
   var nextPhotoIndx = referenceIndx + 1;
-  loadNextPhoto(nextPhotoIndx, photoCount, referenceIndx, currentTrip);
+  loadNextPhoto(nextPhotoIndx, photoCount, referenceIndx);
 
   $('#hide .bigWrap').click(function(event){
     event.stopPropagation();
@@ -225,9 +225,6 @@ function updateFriendPhotos() {
           var photoIndex = lb_order_indx[tripID].indexOf(photoID);
           var photoCount = lb_order_indx[tripID].length;
 
-          // console.log('total len is ' + String(photoCount));
-          // console.log("Photo indx is " + String(photoIndex));
-
           if (currentTrip) {
             for (var i = 0; i < lb_visible_photo[tripID].length; i++) {
               lb_visible_photo[tripID][i] = false;
@@ -248,10 +245,10 @@ function updateFriendPhotos() {
           for (var i=0; i<2; i++) {
             var referenceIndx = photoIndex + i;
             var nextPhotoIndx = referenceIndx + 1;
-            loadNextPhoto(nextPhotoIndx, photoCount, referenceIndx, tripID);
+            loadNextPhoto(nextPhotoIndx, photoCount, referenceIndx);
             var referenceIndx = photoIndex - i;
             var prevPhotoIndx = referenceIndx - 1;
-            loadPrevPhoto(prevPhotoIndx, photoCount, referenceIndx, tripID);
+            loadPrevPhoto(prevPhotoIndx, photoCount, referenceIndx);
           }
 
           $('#hide .bigWrap').click(function(event){
@@ -263,64 +260,62 @@ function updateFriendPhotos() {
   }
 }
 
-function loadNextPhoto(nextPhotoIndx, photoCount, referenceIndx, tripID) {
-  console.log('nextPhotoIndx ' + nextPhotoIndx + " photoCount " + photoCount);
+function loadNextPhoto(nextPhotoIndx, photoCount, referenceIndx) {
   if (nextPhotoIndx < photoCount) {
-    if (!lb_visible_photo[tripID][nextPhotoIndx]) {
-      relativePhoto = lb_order_indx[tripID][referenceIndx];
+    if (!lb_visible_photo[currentTrip][nextPhotoIndx]) {
+      relativePhoto = lb_order_indx[currentTrip][referenceIndx];
       relativePhoto = "#l_" + relativePhoto;
-      nextPhoto = lb_order_indx[tripID][nextPhotoIndx];
-      $(relativePhoto).after(lb_array[tripID][nextPhoto]);
-      lb_visible_photo[tripID][nextPhotoIndx] = true;
+      nextPhoto = lb_order_indx[currentTrip][nextPhotoIndx];
+      $(relativePhoto).after(lb_array[currentTrip][nextPhoto]);
+      lb_visible_photo[currentTrip][nextPhotoIndx] = true;
       getSidebar(nextPhoto);
     }
   } else {
     var offset = nextPhotoIndx - photoCount;
-    if (!lb_visible_photo[tripID][offset]) {
+    if (!lb_visible_photo[currentTrip][offset]) {
       if (offset == 0) {
-        nextPhoto = lb_order_indx[tripID][0];
-        $("#hide").prepend(lb_array[tripID][nextPhoto]);
-        lb_visible_photo[tripID][0] = true;
+        nextPhoto = lb_order_indx[currentTrip][0];
+        $("#hide").prepend(lb_array[currentTrip][nextPhoto]);
+        lb_visible_photo[currentTrip][0] = true;
         getSidebar(nextPhoto);
       } else {
         relOffset = referenceIndx - photoCount;
-        relativePhoto = lb_order_indx[tripID][relOffset];
+        relativePhoto = lb_order_indx[currentTrip][relOffset];
         relativePhoto = "#l_" + relativePhoto;
-        nextPhoto = lb_order_indx[tripID][offset];
-        $(relativePhoto).after(lb_array[tripID][nextPhoto]);
-        lb_visible_photo[tripID][offset] = true;
+        nextPhoto = lb_order_indx[currentTrip][offset];
+        $(relativePhoto).after(lb_array[currentTrip][nextPhoto]);
+        lb_visible_photo[currentTrip][offset] = true;
         getSidebar(nextPhoto);
       }
     }
   }
 }
 
-function loadPrevPhoto(prevPhotoIndx, photoCount, referenceIndx, tripID) {
-  console.log('prevPhotoIndx ' + prevPhotoIndx + " photoCount " + photoCount);
+function loadPrevPhoto(prevPhotoIndx, photoCount, referenceIndx) {
   if (prevPhotoIndx >= 0) {
-    if (!lb_visible_photo[tripID][prevPhotoIndx]) {
-      relativePhoto = lb_order_indx[tripID][referenceIndx];
+    if (!lb_visible_photo[currentTrip][prevPhotoIndx]) {
+      relativePhoto = lb_order_indx[currentTrip][referenceIndx];
       relativePhoto = "#l_" + relativePhoto;
-      prevPhoto = lb_order_indx[tripID][prevPhotoIndx];
-      $(relativePhoto).before(lb_array[tripID][prevPhoto]);
-      lb_visible_photo[tripID][prevPhotoIndx] = true;
+      prevPhoto = lb_order_indx[currentTrip][prevPhotoIndx];
+      $(relativePhoto).before(lb_array[currentTrip][prevPhoto]);
+      lb_visible_photo[currentTrip][prevPhotoIndx] = true;
       getSidebar(prevPhoto);
     }
   } else {
     var offset = 0 - prevPhotoIndx;
-    if (!lb_visible_photo[tripID][photoCount - offset]) {
+    if (!lb_visible_photo[currentTrip][photoCount - offset]) {
       if (offset == 1) {
-        prevPhoto = lb_order_indx[tripID][photoCount - 1];
-        $("#hide").append(lb_array[tripID][prevPhoto]);
-        lb_visible_photo[tripID][photoCount - 1] = true;
+        prevPhoto = lb_order_indx[currentTrip][photoCount - 1];
+        $("#hide").append(lb_array[currentTrip][prevPhoto]);
+        lb_visible_photo[currentTrip][photoCount - 1] = true;
         getSidebar(prevPhoto);
       } else {
         relOffset = 0 - referenceIndx;
-        relativePhoto = lb_order_indx[tripID][photoCount - relOffset];
+        relativePhoto = lb_order_indx[currentTrip][photoCount - relOffset];
         relativePhoto = "#l_" + relativePhoto;
-        prevPhoto = lb_order_indx[tripID][photoCount - offset];
-        $(relativePhoto).before(lb_array[tripID][prevPhoto]);
-        lb_visible_photo[tripID][photoCount - offset] = true;
+        prevPhoto = lb_order_indx[currentTrip][photoCount - offset];
+        $(relativePhoto).before(lb_array[currentTrip][prevPhoto]);
+        lb_visible_photo[currentTrip][photoCount - offset] = true;
         getSidebar(prevPhoto);
       }
     }
