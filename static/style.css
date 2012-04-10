@@ -234,7 +234,7 @@ color: #666666;
 }
 
 #hide {
-    background-color: rgba(0, 0, 0, .9);
+    background-color: rgba(0, 0, 0, .86);
     z-index: 4;
     position: fixed;
     top: 0;
@@ -343,11 +343,38 @@ color: #666666;
   border: 1px solid rgba(0,0,0,.14);
   padding: 5px;
   margin: 0;
-  width: 260px;
+  width: 170px;
   cursor: text;
   background-color: white;
   font-size: 13px;
   line-height: 18px;
+  float: left;
+}
+
+.placeholder:hover, .commentInput:focus {
+  border: 1px solid rgba(0,0,0,.25);
+}
+
+.like, .liked {
+  border: 1px solid rgba(0,0,0,.14);
+  padding: 5px;
+  margin: 0 0 0 10px;
+  width: 60px;
+  font-size: 13px;
+  line-height: 18px;
+  float: left;
+}
+
+.like {
+  background-color: gray;
+}
+
+.liked {
+  background-color: red;
+}
+
+.aLike, .meLike {
+  float: left;
 }
 
 .lbButton:hover {
@@ -642,6 +669,11 @@ color: #666666;
 
 .friendTrip img {
     background-color: #ECEEF0;
+}
+
+em {
+  font-weight: bold;
+  font-style: normal;
 }
 
 /* Hacks ---------- */

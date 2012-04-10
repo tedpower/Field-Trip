@@ -80,6 +80,7 @@ if (e.keyCode == 37) {
   currentPhoto = "#" + prevPhoto;
   $(currentPhoto).removeClass('hidden');
   centerLB();
+  updateLikeCommas(currentPhoto);
 
   var photoID = currentPhoto.substring(3);
   var photoIndex = lb_order_indx[currentTrip].indexOf(photoID);
@@ -106,6 +107,7 @@ if (e.keyCode == 39) {
   currentPhoto = "#" + nextPhoto;
   $(currentPhoto).removeClass('hidden');
   centerLB();
+  updateLikeCommas(currentPhoto);
 
   var photoID = currentPhoto.substring(3);
   var photoIndex = lb_order_indx[currentTrip].indexOf(photoID);
@@ -353,6 +355,8 @@ function getSidebar(photoID) {
       success: function(html){
         $(parent).find(".metaWrap").append(html);
 
+        updateLikeCommas(parent);
+
         $(parent).find(".commentForm").click(function(event){
           $(parent).find(".placeholder").hide();
           $(parent).find(".commentInput").show();
@@ -376,16 +380,37 @@ function getSidebar(photoID) {
         });
 
         $(parent).find(".like").click(function() {
+          $(parent).find(".like").hide();
+          $(parent).find(".liked").show();
+          $(parent).find(".meLike").show();
+          updateLikeCommas(parent);
+
           $.ajax({
             type: "POST",
             url: "/like?photoID=" + photoID,
             cache: false,
             success: function(html){
-              console.log('yay');
+              console.log('liked');
             }
           });
 
-          // optimistically append the comment
+          return false;
+        });
+
+        $(parent).find(".liked").click(function() {
+          $(parent).find(".liked").hide();
+          $(parent).find(".like").show();
+          $(parent).find(".meLike").hide();
+          updateLikeCommas(parent);
+
+          $.ajax({
+            type: "POST",
+            url: "/unlike?photoID=" + photoID,
+            cache: false,
+            success: function(html){
+              console.log('unliked');
+            }
+          });
 
           return false;
         });
@@ -415,4 +440,11 @@ function centerLB() {
   } else {
     $(currentPhoto).css("padding-top",0);
   }
+}
+
+function updateLikeCommas(parent) {
+  var commas = $(parent).find(".comma");
+  commas.show();
+  var lastSpan = $(parent).find(".likes").find('div:visible:last').find(".comma");
+  lastSpan.hide();
 }

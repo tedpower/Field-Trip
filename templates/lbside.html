@@ -18,26 +18,36 @@
       <div class="date">{{ photo.fs_createdAt|date:"M j, Y" }}</div>
     {% endif %}
 
-    {% if 5 > likeCount > 0 %}
-        ♥ {% for like in likeList %}
-        {{ like.name }},
-        {% endfor %}
+    <div class="likes clearfix">
+    {% if 20 > likeCount > 0 %}
+      {% for like in likeList %}
+        <div {% if like.me %}class="meLike"{% else %}class="aLike"{% endif %}>{{ like.name }}<span class="comma">,&nbsp;</span></div>
+      {% endfor %}
+      {% if not liked %}
+        <div class="meLike" style="display:none;">{{ currentUser.firstName }}</div>
+      {% endif %}
     {% else %}
-        {% if likeCount > 5 %}
-            ♥ {{ likeCount }}
-        {% endif %}
+      {% if likeCount >= 20 %}
+        {{ likeCount }} like this
+      {% endif %}
     {% endif %}
-    {% for comment in commentList %}
-      <p>{{ comment.name }} {{ comment.text }}</p>
-    {% endfor %}
+    </div>
 
-    <a href="#" class="like">Like</a>
+
+    {% for comment in commentList %}
+      <p><em>{{ comment.name }}</em> {{ comment.text }}</p>
+    {% endfor %}
 
   </div>
   {% if not photo.fs_venue_only_photo %}
-    <form method="post" action="/comment" class="commentForm">
+    <form method="post" action="/comment" class="commentForm clearfix">
       <div class="placeholder">Write a comment...</div>
       <input type="text" name="comment" class="commentInput" style="display: none;" />
+      {% if liked %}
+      <a href="#" class="like" style="display: none;">Like</a><a href="#" class="liked">Liked</a>
+      {% else %}
+      <a href="#" class="like">Like</a><a href="#" class="liked" style="display: none;">Liked</a>
+      {% endif %}
     </form>
   {% endif %}
   <div class="mapSliver">

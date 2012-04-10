@@ -21,6 +21,7 @@ import security
 from auth import *
 from models import *
 
+
 class Index(webapp2.RequestHandler):
   def get(self):
     cookieValue = None
@@ -866,73 +867,72 @@ class LightboxLoad(webapp2.RequestHandler):
 
 class GetSidebar(webapp2.RequestHandler):
   def get(self):
-    photoID = self.request.get("photo")
-    thisPhoto = Photo.get_by_key_name(photoID)
-    logging.info(photoID)
+    cookieValue = None
+    try:
+      cookieValue = self.request.cookies['FT_Cookie']
+    except KeyError:
+      logging.info('no cookie')
+    if cookieValue:
+      currentUser = User.get_by_key_name(cookieValue)
 
-    commentList = []
-    likeCount = 0
-    likeList = []
+      photoID = self.request.get("photo")
+      thisPhoto = Photo.get_by_key_name(photoID)
+      logging.info(photoID)
 
-    if not thisPhoto.fs_venue_only_photo:
-      if thisPhoto.fs_checkin_id:
-        likeCount = len(thisPhoto.likes)
+      commentList = []
+      likeCount = 0
+      likeList = []
+      liked = False
 
-        if 5 > likeCount > 0:
-          for like in thisPhoto.likes:
-            name = User.get(like).firstName
-            photo = User.get(like).fs_profilePic
-            likeList.append({'name':name, 'photo':photo})
+      if not thisPhoto.fs_venue_only_photo:
+        if thisPhoto.fs_checkin_id:
+          likeCount = len(thisPhoto.likes)
 
-        for comment in thisPhoto.comments:
-          thisComment = PhotoComment.get(comment)
-          thisUser = thisComment.user_parent
-          name = thisUser.firstName
-          photo = thisUser.fs_profilePic
-          timestamp = thisComment.created
-          text = thisComment.text
-          commentList.append({'name': name, 'photo': photo, 'timestamp': timestamp, 'text': text})
-
-        # thisUser = thisPhoto.trip_parent.user_parent
-        # comments_url = "https://api.foursquare.com/v2/checkins/%s?oauth_token=%s" % (thisPhoto.fs_checkin_id, thisUser.fs_token)
-        # comments_json = urlfetch.fetch(comments_url, validate_certificate=False)
-        # comments_response = simplejson.loads(comments_json.content)
-        # # logging.info(comments_url)
-        # comments = comments_response['response']['checkin']['comments']
-        # commentCount = comments['count']
-        # if commentCount > 0:
-        #   for comment in comments['items']:
-        #     name = comment['user']['firstName']
-        #     photo = comment['user']['photo']
-        #     timestamp = comment['createdAt']
-        #     text = comment['text']
-        #     commentList.append({'name':name, 'photo':photo, 'timestamp':timestamp, 'text':text})
-      else:
-        thisUser = thisPhoto.trip_parent.user_parent
-        comments_url = "https://api.instagram.com/v1/media/%s?access_token=%s" % (thisPhoto.key_id, thisUser.ig_token)
-        comments_json = urlfetch.fetch(comments_url, validate_certificate=False, deadline=10)
-        comments_response = simplejson.loads(comments_json.content)
-        # logging.info(comments_url)
-        if 'data' in comments_response:
-          comments = comments_response['data']['comments']
-          commentCount = comments['count']
-          likes = comments_response['data']['likes']
-          likeCount = likes['count']
-          if commentCount > 0:
-            for comment in comments['data']:
-              name = comment['from']['username']
-              photo = comment['from']['profile_picture']
-              timestamp = comment['created_time']
-              text = comment['text']
-              commentList.append({'name': name, 'photo': photo, 'timestamp': timestamp, 'text': text})
           if 5 > likeCount > 0:
-            for like in likes['data']:
-              name = like['username']
-              photo = like['profile_picture']
+            for like in thisPhoto.likes:
+              name = User.get(like).firstName
+              photo = User.get(like).fs_profilePic
               likeList.append({'name':name, 'photo':photo})
 
-    path = os.path.join(os.path.dirname(__file__), 'templates/lbside.html')
-    self.response.out.write(template.render(path, {'photo' : thisPhoto, 'commentList': commentList, 'likeCount': likeCount, 'likeList': likeList}))
+          for comment in thisPhoto.comments:
+            thisComment = PhotoComment.get(comment)
+            thisUser = thisComment.user_parent
+            name = thisUser.firstName
+            photo = thisUser.fs_profilePic
+            timestamp = thisComment.created
+            text = thisComment.text
+            commentList.append({'name': name, 'photo': photo, 'timestamp': timestamp, 'text': text})
+
+        else:
+          thisUser = thisPhoto.trip_parent.user_parent
+          comments_url = "https://api.instagram.com/v1/media/%s?access_token=%s" % (thisPhoto.key_id, thisUser.ig_token)
+          comments_json = urlfetch.fetch(comments_url, validate_certificate=False, deadline=10)
+          comments_response = simplejson.loads(comments_json.content)
+          # logging.info(comments_url)
+          if 'data' in comments_response:
+            comments = comments_response['data']['comments']
+            commentCount = comments['count']
+            likes = comments_response['data']['likes']
+            likeCount = likes['count']
+            if commentCount > 0:
+              for comment in comments['data']:
+                name = comment['from']['username']
+                photo = comment['from']['profile_picture']
+                timestamp = comment['created_time']
+                text = comment['text']
+                commentList.append({'name': name, 'photo': photo, 'timestamp': timestamp, 'text': text})
+            if 20 > likeCount > 0:
+              for like in likes['data']:
+                name = like['username']
+                photo = like['profile_picture']
+                if currentUser.ig_id == like['id']:
+                  liked = True
+                  likeList.append({'name':name, 'photo':photo, 'me': True})
+                else:
+                  likeList.append({'name':name, 'photo':photo, 'me': False})
+
+      path = os.path.join(os.path.dirname(__file__), 'templates/lbside.html')
+      self.response.out.write(template.render(path, {'photo' : thisPhoto, 'commentList': commentList, 'likeCount': likeCount, 'likeList': likeList, 'liked': liked, 'currentUser': currentUser}))
 
 
 class Comment(webapp2.RequestHandler):
@@ -958,7 +958,6 @@ class Comment(webapp2.RequestHandler):
           thisPhoto.comments.append(newComment.key())
           thisPhoto.put()
         else:
-          comment = urllib.quote_plus(comment)
           data = urllib.urlencode({"access_token":currentUser.ig_token,"text":comment})
           url = "https://api.instagram.com/v1/media/%s/comments" % (thisPhoto.key_id)
           result = urllib.urlopen(url,data).read()
@@ -980,7 +979,7 @@ class Like(webapp2.RequestHandler):
       photoID = self.request.get('photoID')
       thisPhoto = Photo.get_by_key_name(photoID)
 
-      if currentUser.key().name() not in thisPhoto.likes:
+      if currentUser.key() not in thisPhoto.likes:
         thisPhoto.likes.append(currentUser.key())
         thisPhoto.put()
 
@@ -988,6 +987,37 @@ class Like(webapp2.RequestHandler):
         if not thisPhoto.fs_checkin_id:
           data = urllib.urlencode({"access_token":currentUser.ig_token})
           url = "https://api.instagram.com/v1/media/%s/likes" % (thisPhoto.key_id)
+          result = urllib.urlopen(url,data).read()
+          url_response = simplejson.loads(result)
+          logging.info(url_response)
+
+
+class Unlike(webapp2.RequestHandler):
+  def post(self):
+    cookieValue = None
+    try:
+      cookieValue = self.request.cookies['FT_Cookie']
+    except KeyError:
+      logging.info('no cookie')
+    if cookieValue:
+      currentUser = User.get_by_key_name(cookieValue)
+
+      photoID = self.request.get('photoID')
+      thisPhoto = Photo.get_by_key_name(photoID)
+
+      if currentUser.key() in thisPhoto.likes:
+        thisPhoto.likes.remove(currentUser.key())
+        thisPhoto.put()
+
+      if currentUser.key().name() not in thisPhoto.likes:
+        thisPhoto.likes.append(currentUser.key())
+        thisPhoto.put()
+
+      if not thisPhoto.fs_venue_only_photo:
+        if not thisPhoto.fs_checkin_id:
+
+          data = urllib.urlencode({"access_token":currentUser.ig_token})
+          url = "https://api.instagram.com/v1/media/%s/likes?_method=DELETE" % (thisPhoto.key_id)
           result = urllib.urlopen(url,data).read()
           url_response = simplejson.loads(result)
           logging.info(url_response)
@@ -1267,6 +1297,7 @@ app = webapp2.WSGIApplication([('/', Index),
                                ('/signup', SignUp),
                                ('/comment', Comment),
                                ('/like', Like),
+                               ('/unlike', Unlike),
                                ('/networks', Networks),
                                ('/loadingStage', LoadingStage),
                                ('/friends/(.*)', FriendPage),
